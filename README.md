@@ -115,6 +115,21 @@ interpolation and idle rotation stops, with no loss of function.
 
 ---
 
+## Using it in email
+
+Email clients strip scripts, iframes and WebGL, so the live widget cannot run
+inside an inbox — nothing interactive can. What works everywhere is an image:
+
+1. Configure the experience and press **Save image** — in the scan-ready state
+   the export is named `voxelqr-code.png` and is itself a scannable QR (the e2e
+   suite decodes the actual downloaded file).
+2. Put that image in the email and link it to your share URL, so a click opens
+   the full 3D experience in the browser while a phone camera can scan the
+   picture directly from the screen.
+
+The sculpture-state export (`voxelqr-<sculpture>-<theme>.png`) makes a good
+hero image for the same link.
+
 ## Performance
 
 One `InstancedMesh` draws every cube. No vectors, matrices or colours are
@@ -163,6 +178,21 @@ framing by design (the app is stateless and cookieless, so there is nothing to
 clickjack), `loading="lazy"` defers the download until the reader scrolls near,
 and the scene stops rendering entirely whenever the iframe is off-screen or the
 tab is hidden — an embed below the fold costs nothing.
+
+## Using it in email
+
+Email clients strip scripts, iframes and WebGL, so the live widget cannot run
+inside an inbox — nothing interactive can. What works everywhere is an image:
+
+1. Configure the experience and press **Save image** — in the scan-ready state
+   the export is named `voxelqr-code.png` and is itself a scannable QR (the e2e
+   suite decodes the actual downloaded file).
+2. Put that image in the email and link it to your share URL, so a click opens
+   the full 3D experience in the browser while a phone camera can scan the
+   picture directly from the screen.
+
+The sculpture-state export (`voxelqr-<sculpture>-<theme>.png`) makes a good
+hero image for the same link.
 
 ## Performance
 

@@ -169,6 +169,37 @@ export function App() {
     window.history.replaceState(null, '', next.toString());
   }, [shareTargetUrl]);
 
+  /**
+   * Export the current view as a PNG — the email story.
+   *
+   * Email clients strip scripts and iframes, so the live widget cannot run in
+   * an inbox. What works everywhere is an image: capture the sculpture (or the
+   * scan-ready code, which stays scannable straight from the email) and link
+   * the image to the shared experience.
+   */
+  const handleSavePng = useCallback(() => {
+    const canvas = document.querySelector<HTMLCanvasElement>('.scene canvas');
+    if (!canvas) {
+      useExperienceStore.setState({ announcement: 'Nothing to capture on this device.' });
+      return;
+    }
+    const current = useExperienceStore.getState();
+    const name =
+      current.phase === 'scan-ready'
+        ? 'voxelqr-code.png'
+        : `voxelqr-${current.sculpture}-${current.theme}.png`;
+    const link = document.createElement('a');
+    link.href = canvas.toDataURL('image/png');
+    link.download = name;
+    link.click();
+    useExperienceStore.setState({
+      announcement:
+        current.phase === 'scan-ready'
+          ? 'Image saved. This picture is itself a scannable code — it works in an email.'
+          : 'Image saved. Reveal the QR first if you want a scannable picture.',
+    });
+  }, []);
+
   const handleEmbed = useCallback(async () => {
     const url = new URL(shareTargetUrl);
     url.searchParams.set('embed', '1');
@@ -321,6 +352,7 @@ export function App() {
         onReturn={handleReturn}
         onShare={() => void handleShare()}
         onEmbed={() => void handleEmbed()}
+        onSavePng={handleSavePng}
         onToggleMute={state.toggleMuted}
       />
 

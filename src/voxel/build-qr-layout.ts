@@ -78,10 +78,12 @@ export function buildQrLayout(options: LayoutOptions): VoxelLayout {
       const ripple = Math.hypot(x, z) / Math.max(qrRadius, 1);
       // At rest only the three finder squares exist as visible relief; every
       // data tile lies flush and background-coloured — the code is a secret
-      // the reveal surfaces, not something on display.
+      // the reveal surfaces, not something on display. Finder cubes vary in
+      // height so the squares read as hand-stacked voxels, not extrusions.
       const finder = isFinderModule(matrix, row, column);
+      const restHeight = finder ? TILE_HEIGHT * (0.65 + rng() * 0.75) : LOCK_HEIGHT;
       instances.push({
-        sculpturePosition: [x, (finder ? TILE_HEIGHT : LOCK_HEIGHT) / 2, z],
+        sculpturePosition: [x, restHeight / 2, z],
         sculptureRotation: [0, 0, 0],
         sculptureScale: 1,
         qrPosition: [x, LOCK_HEIGHT / 2, z],

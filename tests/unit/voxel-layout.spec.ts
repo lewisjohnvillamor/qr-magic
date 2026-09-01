@@ -91,7 +91,9 @@ describe('buildQrLayout', () => {
       // Only the three finder squares exist as relief at rest; data tiles lie
       // flush so the resting base gives none of the code away.
       if (isFinderModule(matrix, row, column)) {
-        expect(sy).toBeCloseTo(TILE_HEIGHT / 2, 10);
+        // Finder cubes vary in height (hand-stacked voxels), within bounds.
+        expect(sy * 2).toBeGreaterThanOrEqual(TILE_HEIGHT * 0.65 - 1e-9);
+        expect(sy * 2).toBeLessThanOrEqual(TILE_HEIGHT * 1.4 + 1e-9);
       } else {
         expect(sy).toBeCloseTo(LOCK_HEIGHT / 2, 10);
       }

@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import type { RevealValues } from '../animation/create-reveal-timeline';
 import { LOCK_HEIGHT, TILE_HEIGHT } from './build-qr-layout';
 import { toSubtle } from '../themes/module-colors';
+import { hashString } from './rng';
 import type { VoxelLayout } from './types';
 
 /**
@@ -139,9 +140,13 @@ export function InstancedVoxels({
         const mosaic = moduleColor(row, column);
         // Finder squares rest as tone-on-tone decoration; data tiles rest as
         // pure background — invisible until the reveal surfaces them.
-        idle.push(
-          new THREE.Color(finder(row, column) ? toSubtle(mosaic, qrBackground, 0.7) : qrBackground),
-        );
+        if (finder(row, column)) {
+          // Each finder cube gets its own tone, like stacked stone.
+          const jitter = (hashString(`finder:${row}:${column}`) % 1000) / 1000;
+          idle.push(new THREE.Color(toSubtle(mosaic, qrBackground, 0.48 + jitter * 0.3)));
+        } else {
+          idle.push(new THREE.Color(qrBackground));
+        }
         scan.push(new THREE.Color(mosaic));
       } else {
         idle.push(null);

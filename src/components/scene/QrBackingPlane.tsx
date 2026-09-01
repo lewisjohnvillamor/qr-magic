@@ -4,7 +4,6 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { QrMatrix } from '../../qr/generate-matrix';
 import { drawCanonicalQr } from '../../qr/draw-canonical';
-import { toSubtle } from '../../themes/module-colors';
 import type { RevealValues } from '../../animation/create-reveal-timeline';
 
 export interface QrBasePlaneProps {
@@ -13,8 +12,6 @@ export interface QrBasePlaneProps {
   background: string;
   /** Per-module mosaic colour; must match the tiles exactly. */
   moduleColor: (row: number, column: number) => string;
-  /** True for the three corner finder squares. */
-  finder: (row: number, column: number) => boolean;
   values: RefObject<RevealValues | null>;
 }
 
@@ -39,8 +36,8 @@ function makeTexture(
  *
  * Two truths share one square of ground. Underneath, always present, lies the
  * mathematically exact mosaic QR (quiet zone included). Over it floats the
- * resting cover: a plain themed ground carrying only the three finder squares
- * as tone-on-tone decoration. The cover fades out as the reveal runs, so the
+ * resting cover: a plain themed ground. The three finder squares stand above
+ * it as real voxel relief. The cover fades out as the reveal runs, so the
  * idle state gives nothing of the data away and the scan state is exactly the
  * canonical code with no blending in the way.
  */
@@ -49,7 +46,6 @@ export function QrBasePlane({
   foreground,
   background,
   moduleColor,
-  finder,
   values,
 }: QrBasePlaneProps) {
   const subtleRef = useRef<THREE.Mesh>(null);
@@ -68,15 +64,14 @@ export function QrBasePlane({
         drawCanonicalQr(context, matrix, {
           foreground,
           background,
-          // Only the three finder squares survive as tone-on-tone decoration;
-          // data modules are painted straight background, so nothing of the
-          // code is on display until the reveal surfaces it.
-          moduleColor: (row, column) =>
-            finder(row, column) ? toSubtle(moduleColor(row, column), background, 0.7) : background,
+          // A plain themed ground: the finder squares above it are real voxel
+          // relief now, so nothing of the code is painted into the surface
+          // until the reveal fades this cover away.
+          moduleColor: () => background,
           modulePixels: 12,
         }),
       ),
-    [matrix, foreground, background, moduleColor, finder],
+    [matrix, foreground, background],
   );
 
   useEffect(() => () => mosaicTexture?.dispose(), [mosaicTexture]);

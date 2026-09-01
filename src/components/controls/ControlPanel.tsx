@@ -27,6 +27,7 @@ export interface ControlPanelProps {
   onReturn: () => void;
   onShare: () => void;
   onEmbed: () => void;
+  onSavePng: () => void;
   onToggleMute: () => void;
 }
 
@@ -95,6 +96,9 @@ export function ControlPanel(props: ControlPanelProps) {
             </p>
             <span className="spacer" />
             {soundButton}
+            <button type="button" className="button" onClick={props.onSavePng}>
+              Save image
+            </button>
             <button type="button" className="button" onClick={handleShare}>
               {shareLabel}
             </button>
@@ -209,6 +213,9 @@ export function ControlPanel(props: ControlPanelProps) {
           </p>
           <span className="spacer" />
           {soundButton}
+          <button type="button" className="button button--quiet" onClick={props.onSavePng}>
+            Save image
+          </button>
           <button type="button" className="button button--quiet" onClick={handleEmbed}>
             {embedLabel}
           </button>

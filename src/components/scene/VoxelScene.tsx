@@ -150,7 +150,6 @@ function SceneContents({
         foreground={qrForeground}
         background={qrBackground}
         moduleColor={moduleColor}
-        finder={finder}
         values={values}
       />
 
