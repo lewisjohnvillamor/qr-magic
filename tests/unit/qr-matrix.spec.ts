@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   countDarkModules,
   generateMatrix,
+  isFinderModule,
   isProtectedModule,
   moduleAt,
 } from '../../src/qr/generate-matrix';
@@ -65,5 +66,24 @@ describe('generateMatrix', () => {
 
   it('throws for a value that cannot be encoded', () => {
     expect(() => generateMatrix('x'.repeat(20000))).toThrow();
+  });
+});
+
+describe('isFinderModule', () => {
+  const matrix = generateMatrix('https://example.com/finder');
+
+  it('covers exactly the three 7x7 corner squares', () => {
+    let count = 0;
+    for (let r = 0; r < matrix.size; r += 1) {
+      for (let c = 0; c < matrix.size; c += 1) {
+        if (isFinderModule(matrix, r, c)) count += 1;
+      }
+    }
+    expect(count).toBe(3 * 49);
+    expect(isFinderModule(matrix, 0, 0)).toBe(true);
+    expect(isFinderModule(matrix, 6, matrix.size - 1)).toBe(true);
+    expect(isFinderModule(matrix, matrix.size - 1, 6)).toBe(true);
+    expect(isFinderModule(matrix, matrix.size - 1, matrix.size - 1)).toBe(false);
+    expect(isFinderModule(matrix, 8, 8)).toBe(false);
   });
 });

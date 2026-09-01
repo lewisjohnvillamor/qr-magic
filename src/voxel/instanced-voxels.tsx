@@ -3,7 +3,8 @@ import type { RefObject } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { RevealValues } from '../animation/create-reveal-timeline';
-import { TILE_HEIGHT } from './build-qr-layout';
+import { LOCK_HEIGHT, TILE_HEIGHT } from './build-qr-layout';
+import { toSubtle } from '../themes/module-colors';
 import type { VoxelLayout } from './types';
 
 /**
@@ -19,8 +20,11 @@ export interface InstancedVoxelsProps {
   layout: VoxelLayout;
   palette: readonly string[];
   qrForeground: string;
+  qrBackground: string;
   /** Per-module mosaic colour; must match the base plane exactly. */
   moduleColor: (row: number, column: number) => string;
+  /** True for the three corner finder squares. */
+  finder: (row: number, column: number) => boolean;
   values: RefObject<RevealValues | null>;
   /** Pointer influence in normalized device coordinates, -1..1. */
   pointer: RefObject<{ x: number; y: number }>;
@@ -42,7 +46,9 @@ export function InstancedVoxels({
   layout,
   palette,
   qrForeground,
+  qrBackground,
   moduleColor,
+  finder,
   values,
   pointer,
   castShadow,
@@ -118,6 +124,33 @@ export function InstancedVoxels({
   const foregroundColor = useMemo(() => new THREE.Color(qrForeground), [qrForeground]);
   const scratchColor = useMemo(() => new THREE.Color(), []);
 
+  /**
+   * Each tile's two lives, precomputed: the whisper pavement colour it rests
+   * in while the sculpture is the subject, and the full mosaic colour it
+   * reaches at scan time. The frame loop lerps between them by each tile's own
+   * progress, matching the base plane's crossfade underneath.
+   */
+  const tileColors = useMemo(() => {
+    const idle: Array<THREE.Color | null> = [];
+    const scan: Array<THREE.Color | null> = [];
+    for (const instance of layout.instances) {
+      if (instance.isQrModule && instance.module) {
+        const [row, column] = instance.module;
+        const mosaic = moduleColor(row, column);
+        // Finder squares rest as tone-on-tone decoration; data tiles rest as
+        // pure background — invisible until the reveal surfaces them.
+        idle.push(
+          new THREE.Color(finder(row, column) ? toSubtle(mosaic, qrBackground, 0.7) : qrBackground),
+        );
+        scan.push(new THREE.Color(mosaic));
+      } else {
+        idle.push(null);
+        scan.push(null);
+      }
+    }
+    return { idle, scan };
+  }, [layout, moduleColor, finder, qrBackground]);
+
   // Seed matrices and colours synchronously so the first painted frame is the
   // finished plinth-and-sculpture rather than a pile of cubes at the origin.
   useLayoutEffect(() => {
@@ -131,15 +164,20 @@ export function InstancedVoxels({
       scratch.euler.set(...instance.sculptureRotation);
       scratch.quaternion.setFromEuler(scratch.euler);
       if (instance.isQrModule) {
-        scratch.scale.set(1, TILE_HEIGHT, 1);
+        const restsProud = instance.sculpturePosition[1] > LOCK_HEIGHT;
+        scratch.scale.set(
+          restsProud ? 1 : 0.0001,
+          restsProud ? TILE_HEIGHT : 0.0001,
+          restsProud ? 1 : 0.0001,
+        );
       } else {
         scratch.scale.setScalar(instance.sculptureScale);
       }
       scratch.matrix.compose(scratch.position, scratch.quaternion, scratch.scale);
       mesh.setMatrixAt(i, scratch.matrix);
-      if (instance.isQrModule && instance.module) {
-        scratchColor.set(moduleColor(instance.module[0], instance.module[1]));
-        mesh.setColorAt(i, scratchColor);
+      const idleTile = tileColors.idle[i];
+      if (idleTile) {
+        mesh.setColorAt(i, idleTile);
       } else {
         const color = instance.isQrModule
           ? foregroundColor
@@ -149,7 +187,7 @@ export function InstancedVoxels({
     }
     mesh.instanceMatrix.needsUpdate = true;
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-  }, [count, layout, paletteColors, foregroundColor, moduleColor, scratch, scratchColor]);
+  }, [count, layout, paletteColors, foregroundColor, tileColors, scratch]);
 
   useFrame((_state, delta) => {
     const mesh = meshRef.current;
@@ -198,11 +236,25 @@ export function InstancedVoxels({
       const [qx, qy, qz] = instance.qrPosition;
 
       if (instance.isQrModule) {
-        // Tiles only settle: same footprint, height eases from plinth to flush.
-        const y = sy + (qy - sy) * local;
+        // Tiles surface: data tiles do not exist at rest — even flush,
+        // background-coloured lit geometry shades differently from the unlit
+        // ground and ghosts the pattern. Each one grows in as the reveal
+        // reaches it, swells upward — the code rising out of the ground —
+        // then settles flush, coloured in, for the scan. The finder squares
+        // (which rest proud as decoration) are always fully grown.
+        const restsProud = sy > LOCK_HEIGHT;
+        const grown = restsProud ? 1 : Math.min(1, local * 4);
+        const swell = Math.sin(local * Math.PI) * (TILE_HEIGHT / 2) * (1 - lock);
+        const y = sy + (qy - sy) * local + swell;
         scratch.position.set(sx, y, sz);
         scratch.quaternion.identity();
-        scratch.scale.set(1, y * 2, 1);
+        scratch.scale.set(grown, Math.max(y * 2, 0.0001) * grown, grown);
+        const idleColor = tileColors.idle[i];
+        const scanColor = tileColors.scan[i];
+        if (idleColor && scanColor) {
+          scratchColor.copy(idleColor).lerp(scanColor, local);
+          mesh.setColorAt(i, scratchColor);
+        }
       } else {
         // Sculpture cubes lift with the scatter, then dive into the base and
         // are absorbed by the module they land on.
@@ -233,6 +285,7 @@ export function InstancedVoxels({
     }
 
     mesh.instanceMatrix.needsUpdate = true;
+    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
   });
 
   return (

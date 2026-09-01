@@ -1,5 +1,5 @@
 import type { QrMatrix } from '../qr/generate-matrix';
-import { moduleAt } from '../qr/generate-matrix';
+import { isFinderModule, moduleAt } from '../qr/generate-matrix';
 import { buildSculptureLayout } from './build-sculpture-layout';
 import { createRng } from './rng';
 import type { SculptureId, VoxelInstance, VoxelLayout } from './types';
@@ -76,8 +76,12 @@ export function buildQrLayout(options: LayoutOptions): VoxelLayout {
       const [x, , z] = modulePosition(matrix, row, column);
       darkPositions.push([x, 0, z]);
       const ripple = Math.hypot(x, z) / Math.max(qrRadius, 1);
+      // At rest only the three finder squares exist as visible relief; every
+      // data tile lies flush and background-coloured — the code is a secret
+      // the reveal surfaces, not something on display.
+      const finder = isFinderModule(matrix, row, column);
       instances.push({
-        sculpturePosition: [x, TILE_HEIGHT / 2, z],
+        sculpturePosition: [x, (finder ? TILE_HEIGHT : LOCK_HEIGHT) / 2, z],
         sculptureRotation: [0, 0, 0],
         sculptureScale: 1,
         qrPosition: [x, LOCK_HEIGHT / 2, z],

@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { generateMatrix, countDarkModules, moduleAt } from '../../src/qr/generate-matrix';
+import {
+  generateMatrix,
+  countDarkModules,
+  isFinderModule,
+  moduleAt,
+} from '../../src/qr/generate-matrix';
 import {
   LOCK_HEIGHT,
   MODULE_SPACING,
@@ -75,15 +80,21 @@ describe('buildQrLayout', () => {
       if (!instance.isQrModule) continue;
       const [x, sy, z] = instance.sculpturePosition;
       const [qx, qy, qz] = instance.qrPosition;
-      // Tiles never move in plan — they only settle from plinth to flush.
+      // Tiles never move in plan — they only settle (or surface) in height.
       expect(qx).toBe(x);
       expect(qz).toBe(z);
-      expect(sy).toBeCloseTo(TILE_HEIGHT / 2, 10);
       expect(qy).toBeCloseTo(LOCK_HEIGHT / 2, 10);
       expect(instance.qrRotation).toEqual([0, 0, 0]);
 
       const column = Math.round(x / MODULE_SPACING + matrix.size / 2 - 0.5);
       const row = Math.round(z / MODULE_SPACING + matrix.size / 2 - 0.5);
+      // Only the three finder squares exist as relief at rest; data tiles lie
+      // flush so the resting base gives none of the code away.
+      if (isFinderModule(matrix, row, column)) {
+        expect(sy).toBeCloseTo(TILE_HEIGHT / 2, 10);
+      } else {
+        expect(sy).toBeCloseTo(LOCK_HEIGHT / 2, 10);
+      }
       expect(moduleAt(matrix, row, column)).toBe(true);
       const key = `${row}:${column}`;
       expect(seen.has(key)).toBe(false);

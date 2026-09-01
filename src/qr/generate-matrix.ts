@@ -71,6 +71,17 @@ export function countDarkModules(matrix: QrMatrix): number {
 }
 
 /**
+ * True when the module belongs to one of the three corner finder squares.
+ * These are the code's identity — the one part of the pattern that can be
+ * shown as decoration without exposing any data.
+ */
+export function isFinderModule(matrix: QrMatrix, row: number, column: number): boolean {
+  const inCorner = (r0: number, c0: number) =>
+    row >= r0 && row < r0 + 7 && column >= c0 && column < c0 + 7;
+  return inCorner(0, 0) || inCorner(0, matrix.size - 7) || inCorner(matrix.size - 7, 0);
+}
+
+/**
  * True when the module belongs to a finder pattern (including its separator) or
  * to the timing patterns. These must never be decorated, shrunk or removed.
  */
