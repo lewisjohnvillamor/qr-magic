@@ -4,7 +4,6 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { RevealValues } from '../animation/create-reveal-timeline';
 import { LOCK_HEIGHT, TILE_HEIGHT } from './build-qr-layout';
-import { toSubtle } from '../themes/module-colors';
 import { hashString } from './rng';
 import type { VoxelLayout } from './types';
 
@@ -134,16 +133,29 @@ export function InstancedVoxels({
   const tileColors = useMemo(() => {
     const idle: Array<THREE.Color | null> = [];
     const scan: Array<THREE.Color | null> = [];
+    const hsl = { h: 0, s: 0, l: 0 };
     for (const instance of layout.instances) {
       if (instance.isQrModule && instance.module) {
         const [row, column] = instance.module;
         const mosaic = moduleColor(row, column);
-        // Finder squares rest as tone-on-tone decoration; data tiles rest as
-        // pure background — invisible until the reveal surfaces them.
+        // Finder squares rest as objects made of the sculpture's own material;
+        // data tiles rest as pure background, invisible until the reveal.
         if (finder(row, column)) {
-          // Each finder cube gets its own tone, like stacked stone.
+          /**
+           * One hue, lit slightly differently cube to cube.
+           *
+           * Mixing toward the background — the earlier approach — desaturated
+           * these into pale grey and, because the mix amount varied per cube,
+           * left them looking mottled rather than carved. Taking the theme's
+           * own voxel colour and moving only its lightness keeps the three
+           * squares unmistakably one material.
+           */
+          const base = paletteColors[0] ?? foregroundColor;
           const jitter = (hashString(`finder:${row}:${column}`) % 1000) / 1000;
-          idle.push(new THREE.Color(toSubtle(mosaic, qrBackground, 0.48 + jitter * 0.3)));
+          const stone = new THREE.Color().copy(base);
+          stone.getHSL(hsl);
+          stone.setHSL(hsl.h, hsl.s, Math.min(0.92, Math.max(0.05, hsl.l + (jitter - 0.5) * 0.14)));
+          idle.push(stone);
         } else {
           idle.push(new THREE.Color(qrBackground));
         }
@@ -154,7 +166,7 @@ export function InstancedVoxels({
       }
     }
     return { idle, scan };
-  }, [layout, moduleColor, finder, qrBackground]);
+  }, [layout, moduleColor, finder, qrBackground, paletteColors, foregroundColor]);
 
   // Seed matrices and colours synchronously so the first painted frame is the
   // finished plinth-and-sculpture rather than a pile of cubes at the origin.

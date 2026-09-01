@@ -157,16 +157,16 @@ export function ControlPanel(props: ControlPanelProps) {
 
       <div className="panel-footer">
         <ChipGroup
-          legend="Sculpture"
-          value={props.sculpture}
-          options={SCULPTURE_OPTIONS}
-          onChange={props.onSculptureChange}
-        />
-        <ChipGroup
           legend="Theme"
           value={props.theme}
           options={THEME_OPTIONS}
           onChange={props.onThemeChange}
+        />
+        <ChipGroup
+          legend="Sculpture"
+          value={props.sculpture}
+          options={SCULPTURE_OPTIONS}
+          onChange={props.onSculptureChange}
         />
 
         {props.theme === 'brand' ? (

@@ -162,11 +162,17 @@ body {
   flex: 0 0 auto;
 }
 
-/* The footer: two quiet rows of choices, no container of their own. */
+/* The footer: the two pickers side by side, no container of their own. */
 .panel-footer {
-  width: min(100%, 44rem);
+  width: min(100%, 56rem);
   display: grid;
-  gap: var(--space-2);
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2) var(--space-4);
+  align-items: start;
+}
+
+.panel-footer .brand-colors {
+  grid-column: 1 / -1;
 }
 
 .panel .hint {
@@ -188,6 +194,9 @@ body {
   }
   .panel-footer {
     width: 100%;
+    /* On a phone the two pickers stack; side by side there is no room to read
+       a chip before it scrolls out of view. */
+    grid-template-columns: 1fr;
   }
   .panel {
     padding-left: var(--space-3);

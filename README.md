@@ -113,6 +113,32 @@ canvas in its scan-ready state and decodes it with ZXing across six viewports an
 pixel densities, all six themes, all six sculptures, short and long URLs, and
 reduced-motion mode. A code that will not decode fails CI.
 
+### Scanning headroom, measured
+
+"It decodes" is a weak test — it says nothing about how much room the code has
+before it stops working. `tests/e2e/degrade.ts` shrinks a capture and re-decodes
+it, which stands in for scanning from further away or with a poorer sensor, and
+reports the smallest fraction that still reads.
+
+That measurement changed the design. Error correction was fixed at level `H`,
+following the spec's advice — but `H` is protection against a code being
+_obscured_, and nothing obscures this one: the sculpture is fully absorbed and
+the scan plane is clean. What actually limits scanning is how many screen pixels
+each module gets, and `H` was spending 30% more modules to buy redundancy the
+design never needed:
+
+| Link      |  Level `H` |         Adaptive |  Headroom before | Headroom after |
+| --------- | ---------: | ---------------: | ---------------: | -------------: |
+| 29 chars  | 33 modules | 33 modules (`H`) |   decodes at 10% | decodes at 10% |
+| 72 chars  | 49 modules | 41 modules (`Q`) |                — |              — |
+| 173 chars | 69 modules | 53 modules (`M`) | **only at 100%** | decodes at 15% |
+
+`chooseErrorCorrectionLevel` now takes the strongest level whose code still fits
+a module budget, never dropping below `M` (15% recovery, the usual print
+default). Short links keep `H` and lose nothing; the long link gained roughly
+6.7x more scanning distance. `tests/e2e/scan-margin.spec.ts` locks that in — pin
+the level back to `H` and it fails.
+
 ---
 
 ## Sculptures and themes
