@@ -4,18 +4,11 @@ import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { RevealValues } from '../../animation/create-reveal-timeline';
 
-export interface SculptureExtent {
-  /** Largest distance from the Y axis: the sculpture rotates, so this is what
-   * has to fit horizontally at any moment. */
-  radiusXZ: number;
-  /** Largest distance from the origin along Y. */
-  halfHeight: number;
-}
-
 export interface CameraRigProps {
-  /** Full presentation width of the QR area, in world units. */
+  /** Full presentation width of the QR base, in world units. */
   qrWorldSize: number;
-  extent: SculptureExtent;
+  /** Highest point of the sculpture standing on the base. */
+  sculptureTop: number;
   /** Pixels at the bottom of the viewport covered by the control panel. */
   bottomInset: number;
   values: RefObject<RevealValues | null>;
@@ -35,9 +28,11 @@ export interface FitOptions {
 }
 
 export interface CameraFit {
-  /** Distance along +Z at which the box fits the usable region. */
+  /** Distance at which the box fits the usable region. */
   distance: number;
-  /** Vertical framing offset that centres the box in the usable region. */
+  /** Offset along the camera's screen-up axis that centres the box in the
+   * usable region. Negative moves the framing point down-screen, lifting the
+   * subject into the strip the interface leaves free. */
   offsetY: number;
 }
 
@@ -70,28 +65,42 @@ export function fitFrontalBox(options: FitOptions): CameraFit {
   // World units per screen pixel at the focal plane.
   const worldHeight = 2 * distance * halfFov;
   const unitsPerPixel = worldHeight / Math.max(1, viewportHeight);
-  // Moving the camera down lifts the subject into the usable strip.
   const offsetY = -(inset / 2) * unitsPerPixel;
 
   return { distance, offsetY };
 }
 
+/** Idle viewpoint: a three-quarter view, high enough to read the base. */
+const IDLE_AZIMUTH = 0.6;
+const IDLE_ELEVATION = 0.62;
+
 /**
- * Blends between the artistic camera and the exact frontal QR camera.
+ * Blends between the three-quarter sculpture view and the exact top-down scan
+ * view.
  *
- * At `camera = 1` the camera looks straight down −Z with no roll or tilt, so the
- * QR plane is perfectly frontal and no perspective distortion is introduced.
+ * At `camera = 1` the camera hangs directly above the origin looking straight
+ * down, with its up axis on −Z: the base plane fills the frame frontally, so
+ * no perspective distortion is introduced and the code cannot be mirrored.
  */
-export function CameraRig({ qrWorldSize, extent, bottomInset, values, pointer }: CameraRigProps) {
+export function CameraRig({
+  qrWorldSize,
+  sculptureTop,
+  bottomInset,
+  values,
+  pointer,
+}: CameraRigProps) {
   const { camera, size } = useThree();
   const target = useRef(new THREE.Vector3());
   const sculpturePos = useRef(new THREE.Vector3());
+  const sculptureTarget = useRef(new THREE.Vector3());
   const qrPos = useRef(new THREE.Vector3());
+  const qrTarget = useRef(new THREE.Vector3());
+  const up = useRef(new THREE.Vector3());
 
   useEffect(() => {
     const perspective = camera as THREE.PerspectiveCamera;
     perspective.near = 0.5;
-    perspective.far = 600;
+    perspective.far = 800;
     perspective.updateProjectionMatrix();
   }, [camera]);
 
@@ -101,41 +110,37 @@ export function CameraRig({ qrWorldSize, extent, bottomInset, values, pointer }:
     const perspective = camera as THREE.PerspectiveCamera;
     const t = reveal.camera;
 
-    // A narrower field of view in the QR state reduces edge distortion further.
-    const fov = 42 - 16 * t;
+    // A narrower field of view in the scan state reduces edge distortion.
+    const fov = 40 - 15 * t;
     if (Math.abs(perspective.fov - fov) > 1e-4) {
       perspective.fov = fov;
       perspective.updateProjectionMatrix();
     }
 
-    // The sculpture spins, so its horizontal footprint is the XZ radius, and
-    // the box is padded so cubes never touch the frame edge.
+    // ---- three-quarter idle pose ----
+    // The plinth turns, so its worst-case on-screen width is its diagonal; the
+    // apparent height combines the foreshortened base and the sculpture.
+    const el = IDLE_ELEVATION;
     const sculptureFit = fitFrontalBox({
-      width: extent.radiusXZ * 2.4,
-      height: extent.halfHeight * 2.5,
+      width: qrWorldSize * 1.5,
+      height: (qrWorldSize * Math.sin(el) + sculptureTop * Math.cos(el)) * 1.2,
       fovDegrees: fov,
       viewportWidth: size.width,
       viewportHeight: size.height,
       bottomInset,
     });
-    // Fitting a box assumes it is flat. A sculpture has depth, and its near face
-    // is magnified by perspective, so the camera is pushed back by roughly the
-    // object's own half-depth before framing.
-    const depthPad = extent.radiusXZ * 0.85;
-    const sculptureDistance = sculptureFit.distance + depthPad;
-    // The framing point, not the object: shifting it moves the subject into the
-    // strip of viewport the control panel leaves free.
-    const sculptureTargetY =
-      sculptureFit.offsetY * (sculptureDistance / Math.max(sculptureFit.distance, 1e-3));
+    const focusY = sculptureTop * 0.32;
+    sculptureTarget.current.set(0, focusY + sculptureFit.offsetY, 0);
+    sculpturePos.current
+      .set(
+        Math.sin(IDLE_AZIMUTH) * Math.cos(el),
+        Math.sin(el),
+        Math.cos(IDLE_AZIMUTH) * Math.cos(el),
+      )
+      .multiplyScalar(sculptureFit.distance)
+      .add(sculptureTarget.current);
 
-    sculpturePos.current.set(
-      // A three-quarter angle: enough to show two faces of a boxy sculpture.
-      sculptureDistance * 0.32,
-      // Wide, flat sculptures read better from slightly above.
-      sculptureTargetY + extent.halfHeight * 0.42 + extent.radiusXZ * 0.34,
-      sculptureDistance,
-    );
-
+    // ---- top-down scan pose ----
     // 1.06 leaves a margin so the quiet zone is never clipped by rounding.
     const qrFit = fitFrontalBox({
       width: qrWorldSize * 1.06,
@@ -145,19 +150,23 @@ export function CameraRig({ qrWorldSize, extent, bottomInset, values, pointer }:
       viewportHeight: size.height,
       bottomInset,
     });
-    qrPos.current.set(0, qrFit.offsetY, qrFit.distance);
+    // Screen-up is world −Z from above, so the framing offset lands on +Z.
+    qrTarget.current.set(0, 0, -qrFit.offsetY);
+    qrPos.current.set(0, qrFit.distance, -qrFit.offsetY);
 
+    // ---- blend ----
     perspective.position.lerpVectors(sculpturePos.current, qrPos.current, t);
+    target.current.lerpVectors(sculptureTarget.current, qrTarget.current, t);
 
     // Pointer parallax fades out with the reveal so the lock state is still.
     const parallax = (1 - t) * reveal.idle;
-    perspective.position.x += (pointer.current?.x ?? 0) * parallax * extent.radiusXZ * 0.12;
-    perspective.position.y += (pointer.current?.y ?? 0) * parallax * extent.radiusXZ * 0.08;
+    perspective.position.x += (pointer.current?.x ?? 0) * parallax * qrWorldSize * 0.02;
+    perspective.position.y += (pointer.current?.y ?? 0) * parallax * qrWorldSize * 0.012;
 
-    perspective.up.set(0, 1, 0);
-    // At t = 1 the target sits at the camera's own height, so the view axis is
-    // exactly -Z and the QR plane is exactly frontal.
-    target.current.set(0, sculptureTargetY * (1 - t) + qrFit.offsetY * t, 0);
+    // The up axis rolls from world-up to −Z so the top-down frame is upright
+    // and, critically, not mirrored.
+    up.current.set(0, 1 - t, -t).normalize();
+    perspective.up.copy(up.current);
     perspective.lookAt(target.current);
   });
 

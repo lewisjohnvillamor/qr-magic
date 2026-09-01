@@ -2,9 +2,11 @@
 
 **Turn any link into a living 3D voxel sculpture that transforms into a QR code.**
 
-VoxelQR renders a link as a voxel sculpture you can nudge with a pointer. Press
-**Reveal QR** and the cubes scatter, reorganise and lock into a scannable QR code.
-Press **Return to sculpture** and the same timeline runs backwards.
+VoxelQR renders a link as a voxel sculpture standing on a plinth that *is* the
+QR code — finder squares visible from the first frame, lying flat in the ground
+like a mosaic. Press **Reveal QR** and the camera tilts to a perfect top-down
+view while the sculpture rains down and is absorbed by the code. Press
+**Return to sculpture** and the same timeline runs backwards.
 
 Everything happens in the browser. There is no backend, no database, no account,
 and the destination link is never sent anywhere.
@@ -155,5 +157,5 @@ runtime dependencies. Three.js DevTools MCP is optional tooling for inspecting a
 live scene; the deployed product does not depend on it.
 
 This product contains no third-party branding, assets, audio or source code. The
-two sound cues are synthesised at runtime with the Web Audio API, and start
-muted.
+sound — two cues plus a looping ambient bed per theme — is synthesised at
+runtime with the Web Audio API, and starts muted until the user turns it on.

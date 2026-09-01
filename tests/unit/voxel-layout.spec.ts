@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { generateMatrix, countDarkModules, moduleAt } from '../../src/qr/generate-matrix';
-import { MODULE_SPACING, buildQrLayout, modulePosition } from '../../src/voxel/build-qr-layout';
+import {
+  LOCK_HEIGHT,
+  MODULE_SPACING,
+  TILE_HEIGHT,
+  buildQrLayout,
+  modulePosition,
+} from '../../src/voxel/build-qr-layout';
 import { buildSculptureLayout } from '../../src/voxel/build-sculpture-layout';
 import { SCULPTURE_IDS } from '../../src/voxel/types';
 import { createRng, hashString } from '../../src/voxel/rng';
@@ -34,12 +40,12 @@ describe('rng', () => {
 });
 
 describe('module positions', () => {
-  it('centres the grid on the origin', () => {
+  it('centres the grid on the origin, flat in the ground plane', () => {
     const first = modulePosition(matrix, 0, 0);
     const last = modulePosition(matrix, matrix.size - 1, matrix.size - 1);
     expect(first[0]).toBeCloseTo(-last[0], 10);
-    expect(first[1]).toBeCloseTo(-last[1], 10);
-    expect(first[2]).toBe(0);
+    expect(first[2]).toBeCloseTo(-last[2], 10);
+    expect(first[1]).toBe(0);
   });
 
   it('spaces adjacent modules by exactly one unit', () => {
@@ -47,29 +53,37 @@ describe('module positions', () => {
     const b = modulePosition(matrix, 3, 4);
     expect(b[0] - a[0]).toBeCloseTo(MODULE_SPACING, 10);
     const c = modulePosition(matrix, 4, 3);
-    expect(a[1] - c[1]).toBeCloseTo(MODULE_SPACING, 10);
+    expect(c[2] - a[2]).toBeCloseTo(MODULE_SPACING, 10);
   });
 });
 
 describe('buildQrLayout', () => {
-  it('allocates exactly one voxel per dark module', () => {
+  it('allocates exactly one tile per dark module, present in both states', () => {
     const layout = layoutFor('crystal');
-    const qrVoxels = layout.instances.filter((instance) => instance.isQrModule);
-    expect(qrVoxels).toHaveLength(countDarkModules(matrix));
+    const tiles = layout.instances.filter((instance) => instance.isQrModule);
+    expect(tiles).toHaveLength(countDarkModules(matrix));
+    for (const tile of tiles) {
+      expect(tile.sculptureScale).toBe(1);
+      expect(tile.qrScale).toBe(1);
+    }
   });
 
-  it('places every QR voxel on a dark module at z = 0 with scale 1', () => {
+  it('places every tile on a dark module of the ground grid', () => {
     const layout = layoutFor('crystal');
     const seen = new Set<string>();
     for (const instance of layout.instances) {
       if (!instance.isQrModule) continue;
-      const [x, y, z] = instance.qrPosition;
-      expect(z).toBe(0);
-      expect(instance.qrScale).toBe(1);
+      const [x, sy, z] = instance.sculpturePosition;
+      const [qx, qy, qz] = instance.qrPosition;
+      // Tiles never move in plan — they only settle from plinth to flush.
+      expect(qx).toBe(x);
+      expect(qz).toBe(z);
+      expect(sy).toBeCloseTo(TILE_HEIGHT / 2, 10);
+      expect(qy).toBeCloseTo(LOCK_HEIGHT / 2, 10);
       expect(instance.qrRotation).toEqual([0, 0, 0]);
 
       const column = Math.round(x / MODULE_SPACING + matrix.size / 2 - 0.5);
-      const row = Math.round(matrix.size / 2 - 0.5 - y / MODULE_SPACING);
+      const row = Math.round(z / MODULE_SPACING + matrix.size / 2 - 0.5);
       expect(moduleAt(matrix, row, column)).toBe(true);
       const key = `${row}:${column}`;
       expect(seen.has(key)).toBe(false);
@@ -78,27 +92,29 @@ describe('buildQrLayout', () => {
     expect(seen.size).toBe(countDarkModules(matrix));
   });
 
-  it('moves surplus decorative voxels outside the protected QR area and fades them', () => {
-    const layout = buildQrLayout({
-      matrix,
-      sculpture: 'city',
-      sculptureCount: 4000,
-      seed: 9,
-    });
+  it('stands the sculpture on the plinth, inside the code footprint', () => {
+    const layout = layoutFor('city', 1400);
+    const qrRadius = layout.qrWorldSize / 2;
     const decorative = layout.instances.filter((instance) => !instance.isQrModule);
-    expect(decorative.length).toBeGreaterThan(0);
-    const radius = (matrix.total / 2) * MODULE_SPACING;
+    expect(decorative.length).toBeGreaterThan(100);
     for (const instance of decorative) {
-      expect(instance.qrScale).toBe(0);
-      expect(Math.hypot(instance.qrPosition[0], instance.qrPosition[1])).toBeGreaterThan(radius);
+      const [x, y, z] = instance.sculpturePosition;
+      expect(y).toBeGreaterThan(TILE_HEIGHT - 1e-9);
+      expect(Math.hypot(x, z)).toBeLessThanOrEqual(qrRadius * 0.75);
     }
   });
 
-  it('starts missing sculpture voxels hidden when the sculpture is smaller than the code', () => {
-    const layout = buildQrLayout({ matrix, sculpture: 'crystal', sculptureCount: 40, seed: 3 });
-    const hidden = layout.instances.filter((instance) => instance.sculptureScale === 0);
-    expect(hidden.length).toBeGreaterThan(0);
-    for (const instance of hidden) expect(instance.isQrModule).toBe(true);
+  it('sends every sculpture cube into a dark module and fades it out', () => {
+    const layout = layoutFor('island');
+    for (const instance of layout.instances) {
+      if (instance.isQrModule) continue;
+      expect(instance.qrScale).toBe(0);
+      const [x, y, z] = instance.qrPosition;
+      expect(y).toBeCloseTo(TILE_HEIGHT / 2, 10);
+      const column = Math.round(x / MODULE_SPACING + matrix.size / 2 - 0.5);
+      const row = Math.round(z / MODULE_SPACING + matrix.size / 2 - 0.5);
+      expect(moduleAt(matrix, row, column)).toBe(true);
+    }
   });
 
   it('keeps stagger delays inside the range the renderer assumes', () => {

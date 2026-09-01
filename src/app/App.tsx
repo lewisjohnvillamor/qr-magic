@@ -9,6 +9,7 @@ import { QUALITY_PROFILES, detectWebglSupport } from '../lib/quality';
 import { prefersReducedMotion, subscribeToReducedMotion } from '../animation/motion-preferences';
 import { useElementHeight } from '../lib/use-element-height';
 import { playCue, disposeAudio } from '../lib/audio';
+import { playAmbient, stopAmbient, disposeAmbient } from '../lib/ambient';
 import { SHARE_PARAM } from '../sharing/share-codec';
 
 const VoxelScene = lazy(() =>
@@ -54,7 +55,22 @@ export function App() {
     return () => document.removeEventListener('visibilitychange', onVisibility);
   }, []);
 
-  useEffect(() => disposeAudio, []);
+  useEffect(
+    () => () => {
+      disposeAudio();
+      disposeAmbient();
+    },
+    [],
+  );
+
+  // The ambient bed follows the mute toggle and crossfades with the theme.
+  useEffect(() => {
+    if (state.muted) {
+      stopAmbient();
+      return;
+    }
+    playAmbient(state.theme);
+  }, [state.muted, state.theme]);
 
   // ---- theme as CSS custom properties ----
   useEffect(() => {
@@ -91,6 +107,10 @@ export function App() {
   const controller = useReveal({ reducedMotion, onRevealComplete, onReturnComplete });
 
   const handleReveal = useCallback(() => {
+    // The reveal commits whatever is in the field first, so typing a link and
+    // pressing the primary button is the whole flow.
+    const result = useExperienceStore.getState().commitUrl();
+    if (!result.ok) return;
     useExperienceStore.setState({ phase: 'revealing', announcement: 'Revealing the QR code.' });
     playCue('reveal', mutedRef.current);
     controller.reveal();

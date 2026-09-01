@@ -43,6 +43,10 @@ const THEME_OPTIONS = THEME_IDS.map((id) => ({
 
 /**
  * Every product action, reachable without touching the canvas (spec §16).
+ *
+ * One column, generous rhythm: link first, the two pickers as full-width rows
+ * with their scrollbars hidden behind edge fades, quiet secondary actions
+ * last. On small screens the panel becomes a bottom sheet.
  */
 export function ControlPanel(props: ControlPanelProps) {
   const [shareLabel, setShareLabel] = useState('Share');
@@ -60,13 +64,18 @@ export function ControlPanel(props: ControlPanelProps) {
     window.setTimeout(() => setShareLabel('Share'), 2400);
   };
 
-  const hintTone = props.urlError ? 'error' : props.urlIsDense ? 'warn' : 'info';
-  const hintText = props.urlError
-    ? props.urlError
-    : props.urlIsDense
-      ? 'This link is long, so the code is dense. Scan from a little closer.'
-      : 'Your link never leaves this browser — the code is generated locally.';
+  const soundButton = (
+    <button
+      type="button"
+      className="button button--quiet"
+      onClick={props.onToggleMute}
+      aria-pressed={!props.muted}
+    >
+      {props.muted ? 'Sound off' : 'Sound on'}
+    </button>
+  );
 
+  // Scan-ready: the panel collapses to a single row so the code owns the screen.
   if (scanReady) {
     return (
       <div className="panel panel--compact">
@@ -77,6 +86,7 @@ export function ControlPanel(props: ControlPanelProps) {
               <span>Point a camera at the code.</span>
             </p>
             <span className="spacer" />
+            {soundButton}
             <button type="button" className="button" onClick={handleShare}>
               {shareLabel}
             </button>
@@ -88,6 +98,13 @@ export function ControlPanel(props: ControlPanelProps) {
       </div>
     );
   }
+
+  const hintTone = props.urlError ? 'error' : props.urlIsDense ? 'warn' : 'info';
+  const hintText = props.urlError
+    ? props.urlError
+    : props.urlIsDense
+      ? 'This link is long, so the code is dense. Scan from a little closer.'
+      : 'Your link never leaves this browser — the code is generated locally.';
 
   return (
     <div className="panel">
@@ -111,8 +128,14 @@ export function ControlPanel(props: ControlPanelProps) {
               onChange={(event) => props.onDraftUrlChange(event.target.value)}
               onBlur={props.onSubmitUrl}
             />
-            <button type="submit" className="button">
-              Update code
+            <button
+              type="button"
+              className="button button--primary"
+              onClick={props.onReveal}
+              disabled={busy || Boolean(props.urlError)}
+              data-testid="reveal-button"
+            >
+              Reveal QR
             </button>
           </div>
           <p className="hint" id="url-hint" data-tone={hintTone}>
@@ -123,22 +146,24 @@ export function ControlPanel(props: ControlPanelProps) {
             ) : null}
             {hintText}
           </p>
+          {/* Enter in the field submits the form and re-generates the code. */}
+          <button type="submit" className="visually-hidden">
+            Update code
+          </button>
         </form>
 
-        <div className="options">
-          <ChipGroup
-            legend="Sculpture"
-            value={props.sculpture}
-            options={SCULPTURE_OPTIONS}
-            onChange={props.onSculptureChange}
-          />
-          <ChipGroup
-            legend="Theme"
-            value={props.theme}
-            options={THEME_OPTIONS}
-            onChange={props.onThemeChange}
-          />
-        </div>
+        <ChipGroup
+          legend="Sculpture"
+          value={props.sculpture}
+          options={SCULPTURE_OPTIONS}
+          onChange={props.onSculptureChange}
+        />
+        <ChipGroup
+          legend="Theme"
+          value={props.theme}
+          options={THEME_OPTIONS}
+          onChange={props.onThemeChange}
+        />
 
         {props.theme === 'brand' ? (
           <div className="brand-colors">
@@ -171,36 +196,15 @@ export function ControlPanel(props: ControlPanelProps) {
         ) : null}
 
         <div className="actions">
-          <button
-            type="button"
-            className="button button--primary"
-            onClick={props.onReveal}
-            disabled={busy || Boolean(props.urlError)}
-            data-testid="reveal-button"
-          >
-            Reveal QR
-          </button>
-
+          <p className="privacy-note">
+            Share links carry your destination — encoded, not encrypted.
+          </p>
+          <span className="spacer" />
+          {soundButton}
           <button type="button" className="button" onClick={handleShare}>
             {shareLabel}
           </button>
-
-          <span className="spacer" />
-
-          <button
-            type="button"
-            className="button button--ghost"
-            onClick={props.onToggleMute}
-            aria-pressed={!props.muted}
-          >
-            {props.muted ? 'Sound off' : 'Sound on'}
-          </button>
         </div>
-
-        <p className="privacy-note">
-          Share links carry your destination in the address bar. It is encoded, not encrypted —
-          anyone with the link can read it.
-        </p>
       </div>
     </div>
   );

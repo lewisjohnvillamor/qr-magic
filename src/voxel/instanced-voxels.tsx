@@ -3,14 +3,17 @@ import type { RefObject } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { RevealValues } from '../animation/create-reveal-timeline';
+import { TILE_HEIGHT } from './build-qr-layout';
 import type { VoxelLayout } from './types';
 
 /**
- * Fraction of the morph devoted to spreading cube arrival times. Kept below 1 so
- * that every cube reaches its exact QR pose when `morph` reaches 1 — the lock
+ * Fraction of the morph devoted to spreading arrival times. Kept below 1 so
+ * that every cube reaches its exact pose when `morph` reaches 1 — the lock
  * state must be mathematically exact, not merely close.
  */
 const STAGGER_WINDOW = 0.34;
+
+const HALF_PI = Math.PI / 2;
 
 export interface InstancedVoxelsProps {
   layout: VoxelLayout;
@@ -27,11 +30,11 @@ function smoothstep(t: number): number {
 }
 
 /**
- * Every visible cube in a single `InstancedMesh` — one draw call for the whole
- * sculpture and the whole QR code.
+ * Every cube in a single `InstancedMesh` — the QR tiles of the base plinth and
+ * the sculpture standing on it, one draw call for both.
  *
- * Nothing is allocated inside the frame loop: matrices, vectors, quaternions and
- * colours are created once and reused.
+ * Nothing is allocated inside the frame loop: matrices, vectors, quaternions
+ * and colours are created once and reused.
  */
 export function InstancedVoxels({
   layout,
@@ -45,6 +48,8 @@ export function InstancedVoxels({
   const groupRef = useRef<THREE.Group>(null);
   const flatUniform = useRef({ value: 0 });
   const clockRef = useRef(0);
+  /** Accumulated idle spin; settles onto the nearest right angle at reveal. */
+  const yawRef = useRef(0);
 
   const count = layout.instances.length;
 
@@ -67,10 +72,10 @@ export function InstancedVoxels({
     });
 
     /**
-     * At the lock stage the shaded result is replaced by the raw instance colour.
-     * Lighting, fog and shadows are beautiful and are also the enemy of a
-     * scanner: this guarantees the final modules are exactly the foreground
-     * colour, whatever the theme's lighting is doing.
+     * At the lock stage the shaded result is replaced by the raw instance
+     * colour. Lighting, fog and shadows are beautiful and are also the enemy
+     * of a scanner: this guarantees the final modules are exactly the
+     * foreground colour, whatever the theme's lighting is doing.
      */
     standard.onBeforeCompile = (shader) => {
       shader.uniforms.uFlat = flatUniform.current;
@@ -97,9 +102,6 @@ export function InstancedVoxels({
       quaternion: new THREE.Quaternion(),
       euler: new THREE.Euler(),
       scale: new THREE.Vector3(),
-      color: new THREE.Color(),
-      base: new THREE.Color(),
-      target: new THREE.Color(),
     }),
     [],
   );
@@ -107,8 +109,8 @@ export function InstancedVoxels({
   const paletteColors = useMemo(() => palette.map((hex) => new THREE.Color(hex)), [palette]);
   const foregroundColor = useMemo(() => new THREE.Color(qrForeground), [qrForeground]);
 
-  // Seed the instance matrices synchronously so the very first painted frame is
-  // already the sculpture rather than a pile of cubes at the origin.
+  // Seed matrices and colours synchronously so the first painted frame is the
+  // finished plinth-and-sculpture rather than a pile of cubes at the origin.
   useLayoutEffect(() => {
     const mesh = meshRef.current;
     if (!mesh) return;
@@ -119,15 +121,21 @@ export function InstancedVoxels({
       scratch.position.set(...instance.sculpturePosition);
       scratch.euler.set(...instance.sculptureRotation);
       scratch.quaternion.setFromEuler(scratch.euler);
-      scratch.scale.setScalar(instance.sculptureScale);
+      if (instance.isQrModule) {
+        scratch.scale.set(1, TILE_HEIGHT, 1);
+      } else {
+        scratch.scale.setScalar(instance.sculptureScale);
+      }
       scratch.matrix.compose(scratch.position, scratch.quaternion, scratch.scale);
       mesh.setMatrixAt(i, scratch.matrix);
-      const base = paletteColors[instance.colorIndex % paletteColors.length];
-      if (base) mesh.setColorAt(i, base);
+      const color = instance.isQrModule
+        ? foregroundColor
+        : paletteColors[instance.colorIndex % paletteColors.length];
+      if (color) mesh.setColorAt(i, color);
     }
     mesh.instanceMatrix.needsUpdate = true;
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-  }, [count, layout, paletteColors, scratch]);
+  }, [count, layout, paletteColors, foregroundColor, scratch]);
 
   useFrame((_state, delta) => {
     const mesh = meshRef.current;
@@ -140,13 +148,16 @@ export function InstancedVoxels({
 
     flatUniform.current.value = lock;
 
-    // Idle motion and pointer influence live on the parent group, so they reach
-    // exactly zero the moment the lock completes.
-    const targetYaw = idle * (time * 0.18 + (pointer.current?.x ?? 0) * 0.35);
-    const targetPitch = idle * ((pointer.current?.y ?? 0) * -0.2 + Math.sin(time * 0.5) * 0.03);
-    group.rotation.set(targetPitch, targetYaw, 0);
-    group.position.y = idle * Math.sin(time * 0.7) * 0.25;
-    group.scale.set(1, squash, 1);
+    // The whole plinth turns slowly while idle. Spin accumulates only while
+    // idle, and settles onto the nearest right angle for the scan state — a
+    // right-angle rotation still decodes, an oblique one costs sharpness.
+    yawRef.current += delta * 0.16 * idle;
+    const nearestRightAngle = Math.round(yawRef.current / HALF_PI) * HALF_PI;
+    const yaw = yawRef.current * idle + nearestRightAngle * (1 - idle);
+    const pointerYaw = (pointer.current?.x ?? 0) * 0.22 * idle;
+    const pointerPitch = (pointer.current?.y ?? 0) * -0.06 * idle;
+    group.rotation.set(pointerPitch, yaw + pointerYaw, 0);
+    group.position.y = idle * Math.sin(time * 0.7) * 0.18;
 
     for (let i = 0; i < count; i += 1) {
       const instance = layout.instances[i];
@@ -159,54 +170,42 @@ export function InstancedVoxels({
       const [sx, sy, sz] = instance.sculpturePosition;
       const [qx, qy, qz] = instance.qrPosition;
 
-      // Cubes lift out of the scene and arc onto the grid rather than sliding.
-      const arc = Math.sin(local * Math.PI) * (instance.isQrModule ? 1.6 : 3.2) * (1 - lock);
-      const wobble = scatter * (1 - lock);
+      if (instance.isQrModule) {
+        // Tiles only settle: same footprint, height eases from plinth to flush.
+        const y = sy + (qy - sy) * local;
+        scratch.position.set(sx, y, sz);
+        scratch.quaternion.identity();
+        scratch.scale.set(1, y * 2, 1);
+      } else {
+        // Sculpture cubes lift with the scatter, then dive into the base and
+        // are absorbed by the module they land on.
+        const wobble = Math.sin(local * Math.PI) * (1 - lock);
+        scratch.position.set(
+          sx + (qx - sx) * local + instance.scatter[0] * scatter * wobble,
+          sy + (qy - sy) * local + instance.scatter[1] * Math.max(scatter, wobble * 0.6),
+          sz + (qz - sz) * local + instance.scatter[2] * scatter * wobble,
+        );
+        // Anticipation squash compresses the sculpture toward the plinth.
+        scratch.position.y = TILE_HEIGHT + (scratch.position.y - TILE_HEIGHT) * squash;
 
-      scratch.position.set(
-        sx + (qx - sx) * local + instance.scatter[0] * wobble,
-        sy + (qy - sy) * local + instance.scatter[1] * wobble,
-        sz + (qz - sz) * local + instance.scatter[2] * wobble + arc,
-      );
+        const [rx, ry, rz] = instance.sculptureRotation;
+        const spin = 1 - local;
+        scratch.euler.set(
+          rx * spin + local * Math.PI * 0.5 * instance.scatter[0] * 0.1,
+          ry * spin,
+          rz * spin,
+        );
+        scratch.quaternion.setFromEuler(scratch.euler);
 
-      const [rx, ry, rz] = instance.sculptureRotation;
-      const spin = (1 - lock) * (1 - local);
-      scratch.euler.set(
-        rx * spin + wobble * instance.scatter[0] * 0.25,
-        ry * spin + wobble * instance.scatter[1] * 0.25,
-        rz * spin,
-      );
-      scratch.quaternion.setFromEuler(scratch.euler);
-
-      const scaleValue = Math.max(
-        0,
-        instance.sculptureScale + (instance.qrScale - instance.sculptureScale) * local,
-      );
-      /**
-       * Cubes flatten into tiles as they arrive.
-       *
-       * Under a perspective camera an off-axis cube shows one of its side faces,
-       * which widens that module by a fraction of its own depth. On a dense code
-       * that error accumulates until adjacent modules merge and the code stops
-       * decoding — so by the time a voxel reaches the grid it has no depth left
-       * to show.
-       */
-      scratch.scale.set(scaleValue, scaleValue, scaleValue * (1 - local * 0.98));
+        const shrink = 1 - local * local;
+        scratch.scale.setScalar(Math.max(0.0001, instance.sculptureScale * shrink));
+      }
 
       scratch.matrix.compose(scratch.position, scratch.quaternion, scratch.scale);
       mesh.setMatrixAt(i, scratch.matrix);
-
-      if (instance.isQrModule) {
-        const base = paletteColors[instance.colorIndex % paletteColors.length];
-        if (base) {
-          scratch.color.copy(base).lerp(foregroundColor, local * local);
-          mesh.setColorAt(i, scratch.color);
-        }
-      }
     }
 
     mesh.instanceMatrix.needsUpdate = true;
-    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
   });
 
   return (

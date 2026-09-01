@@ -10,7 +10,7 @@ import type { RevealValues } from '../../animation/create-reveal-timeline';
 import { buildQrLayout } from '../../voxel/build-qr-layout';
 import { hashString } from '../../voxel/rng';
 import { InstancedVoxels } from '../../voxel/instanced-voxels';
-import { QrBackingPlane } from './QrBackingPlane';
+import { QrBasePlane } from './QrBackingPlane';
 import { CameraRig } from './CameraRig';
 import { Particles } from './Particles';
 
@@ -32,9 +32,9 @@ export interface VoxelSceneProps {
  * Atmosphere, tied to the viewing distance.
  *
  * Fog distances follow the camera rather than sitting at fixed world-space
- * depths. The camera travels a long way back to frame the QR, and a fixed fog
- * range that flatters the sculpture would bury the cubes in haze precisely
- * during the convergence — the one moment the transformation has to read.
+ * depths. The camera travels a long way up to frame the code, and a fixed fog
+ * range that flatters the sculpture would bury the base in haze precisely
+ * during the reveal — the one moment the scene has to read.
  */
 function SceneAtmosphere({ theme }: { theme: Theme }) {
   const { scene, camera } = useThree();
@@ -80,40 +80,36 @@ function SceneContents({
     [matrix, sculpture, quality.sculptureCount],
   );
 
-  /** Separate horizontal and vertical extents: a city is wide and flat, a
-   * crystal is tall and narrow, and one radius flatters neither. */
-  const extent = useMemo(() => {
-    let radiusXZ = 1;
-    let halfHeight = 1;
+  /** Highest point of the sculpture standing on the base. */
+  const sculptureTop = useMemo(() => {
+    let top = 1;
     for (const instance of layout.instances) {
-      if (!instance.isQrModule && instance.sculptureScale === 0) continue;
-      const [x, y, z] = instance.sculpturePosition;
-      radiusXZ = Math.max(radiusXZ, Math.hypot(x, z));
-      halfHeight = Math.max(halfHeight, Math.abs(y));
+      if (instance.isQrModule) continue;
+      top = Math.max(top, instance.sculpturePosition[1]);
     }
-    return { radiusXZ, halfHeight };
+    return top;
   }, [layout]);
 
-  const lightRadius = Math.max(extent.radiusXZ, extent.halfHeight);
+  const lightRadius = Math.max(layout.qrWorldSize / 2, sculptureTop);
 
   return (
     <>
       <SceneAtmosphere theme={theme} />
       <CameraRig
         qrWorldSize={layout.qrWorldSize}
-        extent={extent}
+        sculptureTop={sculptureTop}
         bottomInset={bottomInset}
         values={values}
         pointer={pointer}
       />
 
       <ambientLight color={theme.lights.ambient} intensity={0.62} />
-      {/* Lights are placed relative to the sculpture: a fixed position that
-          flatters a small crystal sits inside a large city. */}
+      {/* Lights are placed relative to the scene: a fixed position that
+          flatters a small base sits inside a large one. */}
       <directionalLight
         color={theme.lights.key}
         intensity={1.85}
-        position={[lightRadius * 0.6, lightRadius * 1.3, lightRadius * 0.9]}
+        position={[lightRadius * 0.6, lightRadius * 1.4, lightRadius * 0.9]}
         castShadow={quality.shadows}
         shadow-mapSize-width={1024}
         shadow-mapSize-height={1024}
@@ -129,8 +125,11 @@ function SceneContents({
       <directionalLight
         color={theme.lights.rim}
         intensity={0.65}
-        position={[-lightRadius, -lightRadius * 0.35, -lightRadius * 0.8]}
+        position={[-lightRadius, lightRadius * 0.4, -lightRadius * 0.8]}
       />
+
+      {/* The code is the ground: base plane first, tiles and sculpture above. */}
+      <QrBasePlane matrix={matrix} foreground={qrForeground} background={qrBackground} />
 
       <InstancedVoxels
         layout={layout}
@@ -139,13 +138,6 @@ function SceneContents({
         values={values}
         pointer={pointer}
         castShadow={quality.shadows}
-      />
-
-      <QrBackingPlane
-        matrix={matrix}
-        foreground={qrForeground}
-        background={qrBackground}
-        values={values}
       />
 
       <Particles
@@ -196,13 +188,13 @@ export function VoxelScene(props: VoxelSceneProps) {
         frameloop={props.active ? 'always' : 'never'}
         dpr={[1, props.quality.maxDpr]}
         shadows={props.quality.shadows}
-        camera={{ fov: 42, position: [0, 4, 30] }}
+        camera={{ fov: 40, position: [18, 22, 32] }}
         gl={{
           antialias: props.quality.antialias,
           alpha: true,
           powerPreference: 'high-performance',
-          // The e2e decode suite screenshots the live canvas, which requires the
-          // drawing buffer to still hold the last frame.
+          // The e2e decode suite screenshots the live canvas, which requires
+          // the drawing buffer to still hold the last frame.
           preserveDrawingBuffer: true,
         }}
         onCreated={({ gl }) => {

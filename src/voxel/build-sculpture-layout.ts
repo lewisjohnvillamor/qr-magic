@@ -162,7 +162,7 @@ const buildCity: Builder = ({ count, seed }) => {
 const buildIsland: Builder = ({ count, seed }) => {
   const rng = createRng(seed);
   const points: SculpturePoint[] = [];
-  const radius = Math.max(4, Math.sqrt(count / 7));
+  const radius = Math.max(4, Math.sqrt(count / 11));
   const gap = 1.05;
 
   for (let y = 0; y < 6; y += 1) {
@@ -178,24 +178,24 @@ const buildIsland: Builder = ({ count, seed }) => {
     }
   }
 
-  // Trunk and canopy.
-  for (let y = 0; y < 4; y += 1) {
-    points.push(point([0, 0.6 + y * 0.95, 0], 3, [0, 0, 0], 0.7));
+  // Trunk and canopy — the tree, not the island, is the subject.
+  for (let y = 0; y < 6; y += 1) {
+    points.push(point([0, 0.6 + y * 0.95, 0], 3, [0, 0, 0], 0.78));
   }
-  for (let i = 0; i < 46; i += 1) {
+  for (let i = 0; i < 72; i += 1) {
     const theta = rng() * TAU;
     const phi = Math.acos(2 * rng() - 1);
-    const r = 1.5 + rng() * 0.9;
+    const r = 2.1 + rng() * 1.2;
     points.push(
       point(
         [
           Math.sin(phi) * Math.cos(theta) * r,
-          4.6 + Math.cos(phi) * r * 0.8,
+          6.6 + Math.cos(phi) * r * 0.85,
           Math.sin(phi) * Math.sin(theta) * r,
         ],
         i % 2,
         [rng() * 0.6, rng() * 0.6, 0],
-        0.8 + rng() * 0.3,
+        0.85 + rng() * 0.35,
       ),
     );
   }
