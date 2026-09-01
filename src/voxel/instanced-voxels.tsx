@@ -257,7 +257,17 @@ export function InstancedVoxels({
         // then settles flush, coloured in, for the scan. The finder squares
         // (which rest proud as decoration) are always fully grown.
         const restsProud = sy > LOCK_HEIGHT;
-        const grown = restsProud ? 1 : Math.min(1, local * 4);
+        /**
+         * At the lock stage every tile shrinks away, leaving the canonical
+         * plane beneath to carry the code alone.
+         *
+         * Raised geometry and a texture are two representations of one
+         * pattern, and they can only ever agree to within a pixel — near the
+         * end of the reveal that disagreement reads as doubled, offset
+         * modules. One exact surface cannot disagree with itself, so the scan
+         * state is the texture and nothing else.
+         */
+        const grown = (restsProud ? 1 : Math.min(1, local * 4)) * (1 - lock);
         const swell = Math.sin(local * Math.PI) * (TILE_HEIGHT / 2) * (1 - lock);
         const y = sy + (qy - sy) * local + swell;
         scratch.position.set(sx, y, sz);

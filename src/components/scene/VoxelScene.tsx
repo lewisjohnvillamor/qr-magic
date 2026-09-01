@@ -100,11 +100,11 @@ function SceneContents({
   /** The mosaic: deterministic per-module theme colours, contrast-floored, and
    * identical between the base plane and the raised tiles. */
   const moduleColor = useMemo(() => {
-    const ramp = buildModuleRamp(theme, qrBackground);
+    const ramp = buildModuleRamp(theme);
     const seed = hashString(`${matrix.value}:${theme.id}`);
     return (row: number, column: number) =>
       moduleColorAt(ramp, seed, row, column, isProtectedModule(matrix, row, column));
-  }, [theme, qrBackground, matrix]);
+  }, [theme, matrix]);
 
   return (
     <>

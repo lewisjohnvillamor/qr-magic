@@ -144,25 +144,71 @@ const buildGift: Builder = ({ count }) => {
   return points;
 };
 
-/** Miniature city — a plaza of towers of varying height. */
+/**
+ * A city — a proper skyline rather than a village.
+ *
+ * Height follows a power law: most blocks are low-rise, a few are mid-rise and
+ * a handful are towers, which is what makes a skyline read as a city rather
+ * than as a bar chart. Downtown sits at the centre, avenues cut the grid, and
+ * the tallest towers step inward as they rise.
+ */
 const buildCity: Builder = ({ count, seed }) => {
   const rng = createRng(seed);
   const points: SculpturePoint[] = [];
-  const grid = Math.max(6, Math.round(Math.sqrt(count / 4)));
+  const grid = Math.max(9, Math.round(Math.sqrt(count / 2.2)));
   const half = (grid - 1) / 2;
-  const gap = 1.25;
+  const gap = 1.08;
+  const floor = 0.92;
+
+  // Two avenues each way, kept off the centre so downtown stays solid.
+  const avenue = (index: number) =>
+    index === Math.round(half * 0.45) ||
+    index === Math.round(half * 1.55) ||
+    index === grid - 1 - Math.round(half * 0.45);
 
   for (let x = 0; x < grid; x += 1) {
     for (let z = 0; z < grid; z += 1) {
-      const distance = Math.hypot(x - half, z - half) / half;
-      // Plaza floor.
-      points.push(point([(x - half) * gap, -3.2, (z - half) * gap], 3, [0, 0, 0], 1.12));
-      if (rng() > 0.82) continue; // streets
-      const height = Math.max(1, Math.round((1 - distance) * 7 * (0.45 + rng() * 0.85)));
+      const distance = Math.min(1, Math.hypot(x - half, z - half) / half);
+      // Ground everywhere: the city sits on its own plate.
+      points.push(point([(x - half) * gap, -2.4, (z - half) * gap], 3, [0, 0, 0], 1.06));
+      if (avenue(x) || avenue(z)) continue;
+      if (rng() > 0.94) continue; // the occasional lot left empty
+
+      // Power law: rng^3 keeps towers rare and makes them count.
+      const rarity = Math.pow(rng(), 3);
+      const downtown = 1 - distance;
+      const height = Math.max(
+        2,
+        Math.round(2 + downtown * 6 + rarity * 26 * (0.35 + downtown * 0.9)),
+      );
+
       for (let y = 0; y < height; y += 1) {
+        // Towers step inward near the top, so they taper instead of ending flat.
+        const up = y / height;
+        const inset = up > 0.72 && height > 12 ? (up - 0.72) * 1.6 : 0;
+        const width = Math.max(0.45, 0.94 - inset);
         points.push(
-          point([(x - half) * gap, -2.6 + y * 0.95, (z - half) * gap], y % 3, [0, 0, 0], 0.9),
+          point(
+            [(x - half) * gap, -1.9 + y * floor, (z - half) * gap],
+            // Upper floors catch the light: a lighter palette entry.
+            y > height - 3 ? 0 : y % 4 === 0 ? 1 : 2,
+            [0, 0, 0],
+            width,
+          ),
         );
+      }
+      // A mast on the tallest towers.
+      if (height > 20) {
+        for (let m = 0; m < 3; m += 1) {
+          points.push(
+            point(
+              [(x - half) * gap, -1.9 + (height + m) * floor, (z - half) * gap],
+              0,
+              [0, 0, 0],
+              0.22,
+            ),
+          );
+        }
       }
     }
   }

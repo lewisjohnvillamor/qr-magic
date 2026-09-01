@@ -12,7 +12,7 @@ export const SCULPTURES: readonly SculptureMeta[] = [
   { id: 'cube', label: 'Floating cube', hint: 'A slowly turning lattice of cubes' },
   { id: 'crystal', label: 'Crystal', hint: 'A faceted double pyramid' },
   { id: 'gift', label: 'Gift box', hint: 'A wrapped box with a ribbon and bow' },
-  { id: 'city', label: 'Miniature city', hint: 'A block of towers on a plaza' },
+  { id: 'city', label: 'Big city', hint: 'A downtown skyline of towers and avenues' },
   { id: 'island', label: 'Island', hint: 'A floating island with a small tree' },
   { id: 'portal', label: 'Abstract portal', hint: 'A ring of cubes around an open centre' },
 ];

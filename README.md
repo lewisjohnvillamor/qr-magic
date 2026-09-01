@@ -8,7 +8,10 @@ By **Lewis John Villamor**
 
 VoxelQR renders a link as a voxel sculpture with three small voxel plots
 resting around it — the finder squares, grounded in scenery built from the same
-palette. No platform, no visible code. Press the sculpture and the
+palette. No platform, no visible code.
+
+Six sculptures ship: a floating cube, a crystal, a gift box, a downtown city
+skyline, an island with a tree, and an abstract portal. Press the sculpture and the
 camera tilts to a perfect top-down view while the code grows out of the ground
 and the sculpture is absorbed into it. Press **Return to sculpture** and the
 same timeline runs backwards.
@@ -29,8 +32,8 @@ The scan-ready image above is a real, working code — it decodes to
 
 |                                                                 |                                                                      |                                                                    |
 | --------------------------------------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| ![Island, Nature theme](docs/media/sculpture-island-nature.jpg) | ![Miniature city, Cyber theme](docs/media/sculpture-city-cyber.jpg)  | ![Crystal, Crystal theme](docs/media/sculpture-crystal.jpg)        |
-| **Island** · Nature                                             | **Miniature city** · Cyber                                           | **Crystal** · Crystal                                              |
+| ![Island, Nature theme](docs/media/sculpture-island-nature.jpg) | ![Big city, Cyber theme](docs/media/sculpture-city-cyber.jpg)        | ![Crystal, Crystal theme](docs/media/sculpture-crystal.jpg)        |
+| **Island** · Nature                                             | **Big city** · Cyber                                                 | **Crystal** · Crystal                                              |
 | ![Gift box, Sunset theme](docs/media/sculpture-gift-sunset.jpg) | ![Abstract portal, Snow theme](docs/media/sculpture-portal-snow.jpg) | ![Floating cube, Brand theme](docs/media/sculpture-cube-brand.jpg) |
 | **Gift box** · Sunset                                           | **Abstract portal** · Snow                                           | **Floating cube** · Brand                                          |
 

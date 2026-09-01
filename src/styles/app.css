@@ -126,15 +126,19 @@ body {
   position: relative;
   z-index: 2;
   margin-top: auto;
-  padding: 0 var(--space-3) calc(var(--space-3) + env(safe-area-inset-bottom));
+  padding: 0 var(--space-4) calc(var(--space-3) + env(safe-area-inset-bottom));
   display: flex;
-  justify-content: center;
-}
-
-.panel {
   flex-direction: column;
   align-items: center;
   gap: var(--space-3);
+  /* Short viewports — a phone in landscape, a small laptop — can leave the
+     footer taller than the space under the sculpture. Cap it and let it
+     scroll rather than clipping controls out of reach. `contain` keeps the
+     scroll from chaining to the page behind it. */
+  max-height: 62vh;
+  max-height: 62svh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 /* The card: the one thing you type, and the three things you do with it. */
@@ -163,11 +167,13 @@ body {
 }
 
 /* The footer: the two pickers side by side, no container of their own. */
+/* Full-bleed: on a wide screen the pickers should use the width they have,
+   not huddle under the card. The panel's padding supplies the gutters. */
 .panel-footer {
-  width: min(100%, 56rem);
+  width: 100%;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: var(--space-2) var(--space-4);
+  gap: var(--space-2) var(--space-5);
   align-items: start;
 }
 
@@ -183,11 +189,11 @@ body {
 /* On phones the panel reads as a bottom sheet: edge to edge, rounded top. */
 @media (max-width: 40rem) {
   .panel {
-    padding: 0;
-  }
-  .panel {
     gap: var(--space-2);
-    padding-bottom: calc(var(--space-2) + env(safe-area-inset-bottom));
+    padding: 0 var(--space-3) calc(var(--space-2) + env(safe-area-inset-bottom));
+    /* More of a short phone screen goes to the controls, since the sculpture
+       still reads at a glance but a half-visible chip row does not. */
+    max-height: 70svh;
   }
   .panel-card {
     width: 100%;
@@ -197,10 +203,6 @@ body {
     /* On a phone the two pickers stack; side by side there is no room to read
        a chip before it scrolls out of view. */
     grid-template-columns: 1fr;
-  }
-  .panel {
-    padding-left: var(--space-3);
-    padding-right: var(--space-3);
   }
 }
 
@@ -451,6 +453,10 @@ body {
   padding: 2px var(--space-3) 2px 2px;
   margin: -2px;
   scroll-snap-type: x proximity;
+  /* A horizontal drag scrolls the chips; vertical drags still reach the
+     panel's own scroller. iOS needs the momentum hint explicitly. */
+  touch-action: pan-x;
+  -webkit-overflow-scrolling: touch;
 }
 
 .chips::-webkit-scrollbar {

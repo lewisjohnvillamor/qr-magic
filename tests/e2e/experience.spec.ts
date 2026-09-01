@@ -52,7 +52,7 @@ test.describe('creation flow', () => {
     await page.getByRole('button', { name: 'Return to sculpture' }).click();
     await expect(page.getByTestId('phase')).toHaveText('sculpture');
 
-    await page.getByRole('radio', { name: 'Miniature city' }).click();
+    await page.getByRole('radio', { name: 'Big city' }).click();
     await revealAndSettle(page);
     expect(decodeQrFromPng(await screenshotScene(page))).toBe(URL_A);
   });

@@ -58,7 +58,16 @@ export function QrBasePlane({
     const reveal = values.current;
     if (!mesh || !reveal) return;
     const material = mesh.material as THREE.MeshBasicMaterial;
-    const opacity = Math.min(1, Math.max(0, (reveal.morph - 0.12) / 0.72));
+    /**
+     * The plane arrives late, once the tiles are essentially full size.
+     *
+     * Fading it in while tiles were still growing put a half-opacity full-size
+     * module under a half-grown raised one — the same pattern at two sizes,
+     * which reads as every module being doubled and offset. Waiting until the
+     * tiles have arrived means the two are congruent by the time both are
+     * visible, and the tiles then shrink away to leave the plane alone.
+     */
+    const opacity = Math.min(1, Math.max(0, (reveal.morph - 0.62) / 0.3));
     material.opacity = opacity;
     // Opaque at the scan state: no blending between the code and whatever is
     // behind it, so the rendered colours are exactly the canonical ones.
