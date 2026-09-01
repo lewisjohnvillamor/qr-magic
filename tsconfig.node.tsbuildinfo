@@ -1,0 +1,1 @@
+{"root":["./vite.config.ts","./playwright.config.ts","./tests/e2e/decode.ts","./tests/e2e/experience.spec.ts","./tests/e2e/helpers.ts","./tests/e2e/qr-decode.spec.ts"],"version":"5.9.3"}
