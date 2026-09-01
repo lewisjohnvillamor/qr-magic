@@ -26,6 +26,8 @@ export interface VoxelSceneProps {
   values: RefObject<RevealValues | null>;
   /** Pixels of the viewport covered by the control panel. */
   bottomInset: number;
+  /** Constant inset the scan pose frames against (see `CameraRig`). */
+  scanInset: number;
   /** Pauses rendering entirely when the document is hidden. */
   active: boolean;
 }
@@ -68,6 +70,7 @@ function SceneContents({
   qrForeground,
   qrBackground,
   bottomInset,
+  scanInset,
   values,
   pointer,
 }: VoxelSceneProps & { pointer: RefObject<{ x: number; y: number }> }) {
@@ -115,6 +118,7 @@ function SceneContents({
         qrWorldSize={layout.qrWorldSize}
         sculptureTop={sculptureTop}
         bottomInset={bottomInset}
+        scanInset={scanInset}
         values={values}
         pointer={pointer}
       />
@@ -215,11 +219,14 @@ export function VoxelScene(props: VoxelSceneProps) {
       pointer.current.x = 0;
       pointer.current.y = 0;
     };
-    element.addEventListener('pointermove', handleMove, { passive: true });
-    element.addEventListener('pointerleave', handleLeave);
+    // Tracked on the window rather than the canvas: the reveal control sits on
+    // top of the scene, and a listener on the canvas would stop receiving
+    // moves the moment the pointer crossed it.
+    window.addEventListener('pointermove', handleMove, { passive: true });
+    window.addEventListener('pointerleave', handleLeave);
     return () => {
-      element.removeEventListener('pointermove', handleMove);
-      element.removeEventListener('pointerleave', handleLeave);
+      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointerleave', handleLeave);
     };
   }, []);
 

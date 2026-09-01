@@ -4,6 +4,7 @@ import { useReveal } from './use-reveal';
 import { ControlPanel } from '../components/controls/ControlPanel';
 import { FallbackQr } from '../components/fallback/FallbackQr';
 import { LiveRegion } from '../components/LiveRegion';
+import { IconButton } from '../components/controls/icons';
 import { getTheme, resolveQrColors } from '../themes/themes';
 import { buildModuleRamp, moduleColorAt } from '../themes/module-colors';
 import { isProtectedModule } from '../qr/generate-matrix';
@@ -24,6 +25,13 @@ function readEmbedMode(): boolean {
   if (typeof window === 'undefined') return false;
   return new URLSearchParams(window.location.search).get('embed') === '1';
 }
+
+/**
+ * Height the scan-ready bar occupies, in CSS pixels. The scan camera frames
+ * against this constant so the locked code never shifts when the editing panel
+ * collapses behind it.
+ */
+const SCAN_INSET = 96;
 
 export function App() {
   const state = useExperienceStore();
@@ -237,9 +245,29 @@ export function App() {
     }
   }, [shareTargetUrl]);
 
+  const scanReady = state.phase === 'scan-ready';
+  const busy = state.phase === 'revealing' || state.phase === 'returning';
+
+  const revealControl = webglSupported ? (
+    <button
+      type="button"
+      className="scene-action"
+      onClick={scanReady ? handleReturn : handleReveal}
+      disabled={busy || Boolean(state.urlError)}
+      aria-label={scanReady ? 'Return to sculpture' : 'Reveal QR'}
+      data-testid="reveal-button"
+    >
+      {/* The hint is the only visible part; the button itself is the sculpture's
+          own space, so the gesture is "press the thing" rather than "find the
+          control". It is still a real focusable button for keyboards and
+          screen readers (spec §16). */}
+      <span className="scene-action-hint" data-hidden={scanReady || busy ? 'true' : 'false'}>
+        Press to reveal the QR
+      </span>
+    </button>
+  ) : null;
+
   if (embedMode) {
-    const scanReady = state.phase === 'scan-ready';
-    const busy = state.phase === 'revealing' || state.phase === 'returning';
     return (
       <div className="app app--embed">
         {webglSupported ? (
@@ -253,6 +281,7 @@ export function App() {
               qrBackground={qrColors.background}
               values={controller.values}
               bottomInset={0}
+              scanInset={0}
               active={documentVisible}
             />
           </Suspense>
@@ -266,6 +295,8 @@ export function App() {
           />
         )}
 
+        {revealControl}
+
         <div className="embed-bar">
           <a
             className="embed-attribution"
@@ -276,17 +307,12 @@ export function App() {
             VoxelQR ↗
           </a>
           <span className="spacer" />
-          {webglSupported ? (
-            <button
-              type="button"
-              className="button button--primary"
-              onClick={scanReady ? handleReturn : handleReveal}
-              disabled={busy}
-              data-testid="reveal-button"
-            >
-              {scanReady ? 'Back to sculpture' : 'Reveal QR'}
-            </button>
-          ) : null}
+          <IconButton
+            icon={state.muted ? 'sound-off' : 'sound-on'}
+            label={state.muted ? 'Sound off' : 'Sound on'}
+            onClick={state.toggleMuted}
+            pressed={!state.muted}
+          />
         </div>
 
         <LiveRegion message={state.announcement} />
@@ -306,6 +332,14 @@ export function App() {
           VoxelQR<span> — links, sculpted</span>
         </h1>
         <p className="tagline">A link that arrives as a 3D sculpture.</p>
+        <span className="spacer" />
+        <IconButton
+          icon={state.muted ? 'sound-off' : 'sound-on'}
+          label={state.muted ? 'Sound off' : 'Sound on'}
+          onClick={state.toggleMuted}
+          pressed={!state.muted}
+          className="masthead-action"
+        />
       </header>
 
       {webglSupported ? (
@@ -319,6 +353,7 @@ export function App() {
             qrBackground={qrColors.background}
             values={controller.values}
             bottomInset={panelHeight}
+            scanInset={SCAN_INSET}
             active={documentVisible}
           />
         </Suspense>
@@ -332,6 +367,8 @@ export function App() {
         />
       )}
 
+      {scanReady ? null : revealControl}
+
       <ControlPanel
         draftUrl={state.draftUrl}
         urlError={state.urlError}
@@ -341,19 +378,16 @@ export function App() {
         brandForeground={state.brandForeground}
         brandBackground={state.brandBackground}
         phase={state.phase}
-        muted={state.muted}
         contrastAdjusted={qrColors.adjusted}
         onDraftUrlChange={state.setDraftUrl}
         onSubmitUrl={() => state.commitUrl()}
         onSculptureChange={state.setSculpture}
         onThemeChange={state.setTheme}
         onBrandColorsChange={state.setBrandColors}
-        onReveal={handleReveal}
         onReturn={handleReturn}
         onShare={() => void handleShare()}
         onEmbed={() => void handleEmbed()}
         onSavePng={handleSavePng}
-        onToggleMute={state.toggleMuted}
       />
 
       <LiveRegion message={state.announcement} />

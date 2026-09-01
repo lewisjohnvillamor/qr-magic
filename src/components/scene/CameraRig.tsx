@@ -11,6 +11,13 @@ export interface CameraRigProps {
   sculptureTop: number;
   /** Pixels at the bottom of the viewport covered by the control panel. */
   bottomInset: number;
+  /**
+   * Inset used for the scan pose. Deliberately a constant rather than the live
+   * panel height: the panel collapses to its compact bar as the code locks, and
+   * framing the scan view from a height that changes at that moment would move
+   * the code just as it was announced stable — a scanner would see it jump.
+   */
+  scanInset: number;
   values: RefObject<RevealValues | null>;
   pointer: RefObject<{ x: number; y: number }>;
 }
@@ -86,6 +93,7 @@ export function CameraRig({
   qrWorldSize,
   sculptureTop,
   bottomInset,
+  scanInset,
   values,
   pointer,
 }: CameraRigProps) {
@@ -148,7 +156,7 @@ export function CameraRig({
       fovDegrees: fov,
       viewportWidth: size.width,
       viewportHeight: size.height,
-      bottomInset,
+      bottomInset: scanInset,
     });
     // Screen-up is world −Z from above, so the framing offset lands on +Z.
     qrTarget.current.set(0, 0, -qrFit.offsetY);

@@ -78,9 +78,18 @@ body {
   display: flex;
   align-items: baseline;
   gap: var(--space-3);
-  padding: var(--space-4) var(--space-5) 0;
+  padding: var(--space-4) var(--space-4) 0 var(--space-5);
   pointer-events: none;
   transition: opacity var(--duration) ease;
+}
+
+.masthead .spacer {
+  flex: 1 1 auto;
+}
+
+.masthead-action {
+  pointer-events: auto;
+  align-self: center;
 }
 
 .masthead[data-dimmed='true'] {
@@ -122,11 +131,19 @@ body {
   justify-content: center;
 }
 
-.panel-inner {
-  width: min(100%, 40rem);
-  display: grid;
-  gap: var(--space-4);
-  padding: var(--space-4) var(--space-4) var(--space-3);
+.panel {
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* The card: the one thing you type, and the three things you do with it. */
+.panel-card {
+  width: min(100%, 34rem);
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+  padding: var(--space-3);
   border: 1px solid var(--hairline);
   border-radius: var(--radius-panel);
   background: var(--surface);
@@ -134,24 +151,54 @@ body {
   box-shadow: var(--shadow);
 }
 
+.panel-card .field {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.card-actions {
+  display: flex;
+  gap: var(--space-1);
+  flex: 0 0 auto;
+}
+
+/* The footer: two quiet rows of choices, no container of their own. */
+.panel-footer {
+  width: min(100%, 44rem);
+  display: grid;
+  gap: var(--space-2);
+}
+
+.panel .hint {
+  width: min(100%, 34rem);
+  padding: 0 var(--space-1);
+}
+
 /* On phones the panel reads as a bottom sheet: edge to edge, rounded top. */
 @media (max-width: 40rem) {
   .panel {
     padding: 0;
   }
-  .panel-inner {
+  .panel {
+    gap: var(--space-2);
+    padding-bottom: calc(var(--space-2) + env(safe-area-inset-bottom));
+  }
+  .panel-card {
     width: 100%;
-    border-radius: var(--radius-panel) var(--radius-panel) 0 0;
-    border-left: 0;
-    border-right: 0;
-    border-bottom: 0;
-    padding: var(--space-3) var(--space-4) calc(var(--space-3) + env(safe-area-inset-bottom));
-    gap: var(--space-3);
+  }
+  .panel-footer {
+    width: 100%;
+  }
+  .panel {
+    padding-left: var(--space-3);
+    padding-right: var(--space-3);
   }
 }
 
 @media (prefers-reduced-transparency: reduce) {
-  .panel-inner {
+  .panel-card,
+  .scene-action-hint,
+  .masthead-action.icon-button {
     background: var(--surface-strong);
     backdrop-filter: none;
   }
@@ -278,6 +325,88 @@ body {
   }
 }
 
+/* ---------- icon buttons ---------- */
+
+.icon-button {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* 44px: a comfortable touch target on a phone. */
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0;
+  color: var(--ink);
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  background: transparent;
+  cursor: pointer;
+  opacity: 0.7;
+  transition:
+    opacity var(--duration) ease,
+    background var(--duration) ease;
+}
+
+.icon-button:hover:not(:disabled),
+.icon-button[aria-pressed='true'] {
+  opacity: 1;
+  background: var(--surface-strong);
+  border-color: var(--hairline);
+}
+
+.masthead-action.icon-button {
+  background: var(--surface);
+  border-color: var(--hairline);
+  backdrop-filter: blur(12px);
+}
+
+/* ---------- press-the-sculpture reveal ---------- */
+
+.scene-action {
+  /* The free space between the masthead and the bottom stack — the
+     sculpture's own area — so the hint always lands just above the card
+     however tall the panel grows. */
+  position: relative;
+  z-index: 1;
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 0;
+  padding: 0 0 var(--space-3);
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.scene-action:disabled {
+  cursor: default;
+}
+
+.scene-action-hint {
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 0.5rem 0.9rem;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  backdrop-filter: blur(12px);
+  box-shadow: var(--shadow);
+  transition:
+    opacity var(--duration) ease,
+    transform var(--duration) ease;
+}
+
+.scene-action-hint[data-hidden='true'] {
+  opacity: 0;
+}
+
+.scene-action:hover:not(:disabled) .scene-action-hint {
+  transform: translateY(-2px);
+}
+
 /* ---------- option rows ---------- */
 
 .option-group {
@@ -361,7 +490,8 @@ body {
   align-items: center;
 }
 
-.actions .spacer {
+.actions .spacer,
+.panel-card .spacer {
   flex: 1 1 auto;
 }
 
@@ -399,8 +529,12 @@ body {
 
 /* ---------- scan-ready compact bar ---------- */
 
-.panel--compact .panel-inner {
-  padding: var(--space-2) var(--space-3);
+.panel--compact .panel-card {
+  /* Wider than the editing card so the cue and its actions sit on one line. */
+  width: min(100%, 40rem);
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
 }
 
 .scan-cue {
@@ -422,9 +556,6 @@ body {
 @media (max-width: 40rem) {
   .scan-cue span {
     display: none;
-  }
-  .panel--compact .actions {
-    flex-wrap: nowrap;
   }
   .panel--compact .button--primary {
     padding: 0 var(--space-3);

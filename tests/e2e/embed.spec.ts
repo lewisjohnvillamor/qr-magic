@@ -20,6 +20,8 @@ test.describe('embed mode', () => {
     // No control panel, no masthead — the scene is the widget.
     await expect(page.locator('.panel')).toHaveCount(0);
     await expect(page.locator('.masthead')).toHaveCount(0);
+    // Sound is reachable without chrome.
+    await expect(page.getByRole('button', { name: 'Sound off' })).toBeVisible();
 
     // Attribution links back to the full experience.
     const attribution = page.locator('.embed-attribution');
@@ -34,8 +36,8 @@ test.describe('embed mode', () => {
     await page.waitForTimeout(600);
     expect(decodeQrFromPng(await screenshotScene(page))).toBe(URL_A);
 
-    // And reverses.
-    await page.getByRole('button', { name: 'Back to sculpture' }).click();
+    // And reverses — in the embed the scene itself is the only control.
+    await page.getByRole('button', { name: 'Return to sculpture' }).click();
     await page.getByTestId('phase').filter({ hasText: 'sculpture' }).waitFor();
   });
 

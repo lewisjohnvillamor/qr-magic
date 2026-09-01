@@ -106,10 +106,14 @@ encrypted, and the interface says so.
 
 ## Accessibility
 
-Nothing requires touching the canvas. Reveal, return, share, mute, sculpture and
-theme are all labelled controls with visible focus, the sculpture and theme
-pickers are arrow-key radio groups, and URL errors and the scan-ready state are
-announced through a polite live region. State is never signalled by colour alone.
+Nothing requires touching the canvas _in the sense that matters_: the reveal
+gesture is pressing the sculpture, but that target is a real `<button>` with an
+accessible name, reachable by keyboard and announced by screen readers — the
+gesture is the styling, not the mechanism. The icon actions (share, embed, save)
+carry `aria-label` and a hover tooltip, so nothing depends on recognising a
+glyph; the sculpture and theme pickers are arrow-key radio groups; and URL
+errors and the scan-ready state are announced through a polite live region.
+State is never signalled by colour alone.
 With `prefers-reduced-motion` the scatter choreography is replaced by a short
 interpolation and idle rotation stops, with no loss of function.
 
