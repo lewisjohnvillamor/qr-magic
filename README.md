@@ -2,7 +2,7 @@
 
 **Turn any link into a living 3D voxel sculpture that transforms into a QR code.**
 
-VoxelQR renders a link as a voxel sculpture standing on a plinth that *is* the
+VoxelQR renders a link as a voxel sculpture standing on a plinth that _is_ the
 QR code — finder squares visible from the first frame, lying flat in the ground
 like a mosaic. Press **Reveal QR** and the camera tilts to a perfect top-down
 view while the sculpture rains down and is absorbed by the code. Press
