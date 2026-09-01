@@ -1,7 +1,6 @@
-import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { ChipGroup } from './ChipGroup';
-import { IconButton } from './icons';
+import { ShareActions } from './ShareActions';
 import { SCULPTURES } from '../../voxel/types';
 import type { SculptureId } from '../../voxel/types';
 import { THEME_IDS, THEMES } from '../../themes/themes';
@@ -51,8 +50,6 @@ const THEME_OPTIONS = THEME_IDS.map((id) => ({
  * thing it is presenting.
  */
 export function ControlPanel(props: ControlPanelProps) {
-  const [shareCopied, setShareCopied] = useState(false);
-  const [embedCopied, setEmbedCopied] = useState(false);
   const scanReady = props.phase === 'scan-ready';
 
   const handleSubmit = (event: FormEvent) => {
@@ -60,40 +57,8 @@ export function ControlPanel(props: ControlPanelProps) {
     props.onSubmitUrl();
   };
 
-  const flash = (setter: (value: boolean) => void) => {
-    setter(true);
-    window.setTimeout(() => setter(false), 2400);
-  };
-
-  const handleShare = () => {
-    props.onShare();
-    flash(setShareCopied);
-  };
-
-  const handleEmbed = () => {
-    props.onEmbed();
-    flash(setEmbedCopied);
-  };
-
   const actions = (
-    <div className="card-actions">
-      <IconButton
-        icon={shareCopied ? 'check' : 'share'}
-        label={shareCopied ? 'Link copied' : 'Share'}
-        title={
-          shareCopied
-            ? 'Link copied'
-            : 'Share — the link opens the full 3D sculpture, and carries your destination encoded, not encrypted'
-        }
-        onClick={handleShare}
-      />
-      <IconButton
-        icon={embedCopied ? 'check' : 'embed'}
-        label={embedCopied ? 'Code copied' : 'Embed'}
-        onClick={handleEmbed}
-      />
-      <IconButton icon="download" label="Save image" onClick={props.onSavePng} />
-    </div>
+    <ShareActions onShare={props.onShare} onEmbed={props.onEmbed} onSavePng={props.onSavePng} />
   );
 
   // Scan-ready: everything but the code gets out of the way.

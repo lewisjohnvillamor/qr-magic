@@ -88,8 +88,3 @@ export function createRevealTimeline(
 
   return timeline;
 }
-
-/** Total wall-clock duration of the reveal, for tests and announcements. */
-export function revealDuration(timeline: gsap.core.Timeline): number {
-  return timeline.duration();
-}

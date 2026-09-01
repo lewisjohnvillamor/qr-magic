@@ -5,6 +5,7 @@ import {
   buildShareUrl,
   decodeExperience,
   encodeExperience,
+  isReadOnlySearch,
   readExperienceFromSearch,
 } from '../../src/sharing/share-codec';
 
@@ -36,6 +37,15 @@ describe('share codec', () => {
     expect(parsed.hash).toBe('');
     expect(parsed.searchParams.get('old')).toBeNull();
     expect(parsed.searchParams.get(SHARE_PARAM)).toBeTruthy();
+  });
+
+  it('marks a link read-only only when asked', () => {
+    const plain = new URL(buildShareUrl('https://voxelqr.example/', payload));
+    const shared = new URL(buildShareUrl('https://voxelqr.example/', payload, { readOnly: true }));
+    expect(isReadOnlySearch(plain.search)).toBe(false);
+    expect(isReadOnlySearch(shared.search)).toBe(true);
+    // Both carry the same experience: read-only changes the controls, not the art.
+    expect(shared.searchParams.get(SHARE_PARAM)).toBe(plain.searchParams.get(SHARE_PARAM));
   });
 
   it('reads a payload back out of a search string', () => {

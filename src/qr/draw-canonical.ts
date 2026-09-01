@@ -48,19 +48,3 @@ export function drawCanonicalQr(
 
   return { pixelSize, modulePixels };
 }
-
-/** Render the canonical QR to a detached canvas, sized to fit `targetPixels`. */
-export function renderCanonicalQrCanvas(
-  matrix: QrMatrix,
-  options: DrawOptions & { targetPixels?: number },
-): HTMLCanvasElement {
-  const canvas = document.createElement('canvas');
-  const context = canvas.getContext('2d');
-  if (!context) throw new Error('2D canvas context unavailable');
-
-  const modulePixels =
-    options.modulePixels ?? Math.max(2, Math.floor((options.targetPixels ?? 512) / matrix.total));
-
-  drawCanonicalQr(context, matrix, { ...options, modulePixels });
-  return canvas;
-}

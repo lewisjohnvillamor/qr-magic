@@ -6,6 +6,17 @@ import { normalizeUrl } from '../qr/normalize-url';
 export const SHARE_PARAM = 'experience';
 
 /**
+ * Query parameter marking a link as *received* rather than *authored*.
+ *
+ * The app keeps the address bar in sync with an `experience` payload so a
+ * reload restores your work, which means the payload alone cannot tell "someone
+ * shared this with me" from "I have been editing this". The Share and Embed
+ * actions add this flag; the address-bar sync never does. So a recipient gets a
+ * read-only experience while the author keeps their editable page.
+ */
+export const VIEW_PARAM = 'view';
+
+/**
  * Hard cap on encoded payload size. A share link is untrusted input from the
  * address bar; refusing to even parse an oversized one keeps the cost bounded.
  */
@@ -72,13 +83,28 @@ export function decodeExperience(encoded: string | null | undefined): DecodeResu
   return { ok: true, payload: { ...parsed.data, url: url.url } };
 }
 
+export interface ShareUrlOptions {
+  /** Mark the link read-only, so the recipient gets no editing controls. */
+  readOnly?: boolean;
+}
+
 /** Build the full shareable experience URL for the current origin. */
-export function buildShareUrl(baseUrl: string, payload: Omit<ExperiencePayload, 'v'>): string {
+export function buildShareUrl(
+  baseUrl: string,
+  payload: Omit<ExperiencePayload, 'v'>,
+  options: ShareUrlOptions = {},
+): string {
   const url = new URL(baseUrl);
   url.hash = '';
   url.search = '';
   url.searchParams.set(SHARE_PARAM, encodeExperience(payload));
+  if (options.readOnly) url.searchParams.set(VIEW_PARAM, '1');
   return url.toString();
+}
+
+/** True when this location was opened from a shared, read-only link. */
+export function isReadOnlySearch(search: string): boolean {
+  return new URLSearchParams(search).get(VIEW_PARAM) === '1';
 }
 
 /** Read the experience payload out of a location search string. */

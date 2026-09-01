@@ -1,7 +1,7 @@
 # VoxelQR — Production Plan
 
 **Source spec:** _VoxelQR Product and Implementation Specification v1.0_
-**Plan version:** 1.1 · **Status:** shipped, iterating
+**Plan version:** 1.2 · **Status:** shipped, iterating
 
 > **v1.1 revisions (post-review):** the transformation was rebuilt around the
 > ground-base mechanic — the code is the plinth the sculpture stands on, and
@@ -11,6 +11,12 @@
 > `?embed=1` widget mode with an iframe snippet (CSP allows framing by
 > design), off-screen render pausing, and an idle fast-path that skips the
 > per-instance loop entirely while nothing animates.
+> **v1.2 revisions:** shared links now open **read-only** — a recipient gets
+> the sculpture, the reveal and the Share/Embed/Save actions, but none of the
+> authoring controls, keyed off a `view=1` flag that Share and Embed add and
+> the address-bar sync never does. A licensed cinematic bed (CC BY 4.0, see
+> ATTRIBUTION.md) sits under the synthesised ambience, transcoded to 64 kbps
+> mono and crossfaded to loop seamlessly, fetched only on unmute.
 > **Shape:** client-only static site. No backend, no database, no accounts.
 
 ---
