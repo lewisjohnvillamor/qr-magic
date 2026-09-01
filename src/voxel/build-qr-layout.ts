@@ -100,6 +100,52 @@ export function buildQrLayout(options: LayoutOptions): VoxelLayout {
     }
   }
 
+  /**
+   * Pedestals under the finder squares.
+   *
+   * The three squares are the only part of the code that exists at rest, and
+   * bare rings floating on nothing read as markers rather than scenery. Each
+   * one gets a small pad of decorative voxels beneath and around it, built
+   * from the sculpture's own palette — earth under grass, a stone footing —
+   * so the squares become three little plots belonging to the same world.
+   *
+   * They are decoration, not code: like every sculpture cube they fade out as
+   * the reveal runs, leaving the exact modules behind.
+   */
+  const finderCentres: Array<[number, number]> = [
+    [3, 3],
+    [3, matrix.size - 4],
+    [matrix.size - 4, 3],
+  ];
+  for (const [centreRow, centreColumn] of finderCentres) {
+    for (let dr = -4; dr <= 4; dr += 1) {
+      for (let dc = -4; dc <= 4; dc += 1) {
+        // Nibble the corners so the pad reads as ground, not as a tile.
+        const edge = Math.max(Math.abs(dr), Math.abs(dc));
+        if (edge === 4 && Math.abs(dr) + Math.abs(dc) >= 7) continue;
+        if (edge === 4 && rng() > 0.55) continue;
+        const [x, , z] = modulePosition(matrix, centreRow + dr, centreColumn + dc);
+        // Two layers: a surface course and the earth it sits on.
+        for (let layer = 0; layer < 2; layer += 1) {
+          const y = -0.28 - layer * 0.56;
+          instances.push({
+            sculpturePosition: [x, y, z],
+            sculptureRotation: [0, 0, 0],
+            sculptureScale: 1,
+            qrPosition: [x, y, z],
+            qrRotation: [0, 0, 0],
+            qrScale: 0,
+            colorIndex: layer === 0 ? (edge >= 3 ? 1 : 0) : 3,
+            delay: 0.05 + rng() * 0.2,
+            isQrModule: false,
+            isPedestal: true,
+            scatter: [(rng() - 0.5) * 2, rng() * 1.5, (rng() - 0.5) * 2],
+          });
+        }
+      }
+    }
+  }
+
   // ---- Sculpture standing on the plinth ----
   const raw = buildSculptureLayout(sculpture, { count: sculptureCount, seed });
 

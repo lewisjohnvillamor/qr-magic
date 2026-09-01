@@ -6,9 +6,6 @@ import { FallbackQr } from '../components/fallback/FallbackQr';
 import { LiveRegion } from '../components/LiveRegion';
 import { IconButton } from '../components/controls/icons';
 import { getTheme, resolveQrColors } from '../themes/themes';
-import { buildModuleRamp, moduleColorAt } from '../themes/module-colors';
-import { isProtectedModule } from '../qr/generate-matrix';
-import { hashString } from '../voxel/rng';
 import { QUALITY_PROFILES, detectWebglSupport } from '../lib/quality';
 import { prefersReducedMotion, subscribeToReducedMotion } from '../animation/motion-preferences';
 import { useElementHeight } from '../lib/use-element-height';
@@ -153,14 +150,6 @@ export function App() {
     useExperienceStore.setState({ phase: 'sculpture' });
   }, [layoutKey, controller]);
 
-  const fallbackModuleColor = useMemo(() => {
-    const ramp = buildModuleRamp(theme, qrColors.background);
-    const seed = hashString(`${state.matrix.value}:${theme.id}`);
-    const matrix = state.matrix;
-    return (row: number, column: number) =>
-      moduleColorAt(ramp, seed, row, column, isProtectedModule(matrix, row, column));
-  }, [theme, qrColors.background, state.matrix]);
-
   const shareTargetUrl = useMemo(
     () => state.shareUrl(window.location.href),
     // Recomputed whenever any part of the shared payload changes.
@@ -293,7 +282,6 @@ export function App() {
             matrix={state.matrix}
             foreground={qrColors.foreground}
             background={qrColors.background}
-            moduleColor={fallbackModuleColor}
             reason="This device cannot run the 3D scene, so here is the code on its own."
           />
         )}
@@ -365,7 +353,6 @@ export function App() {
           matrix={state.matrix}
           foreground={qrColors.foreground}
           background={qrColors.background}
-          moduleColor={fallbackModuleColor}
           reason="This device cannot run the 3D scene, so here is the code on its own. Everything else still works."
         />
       )}

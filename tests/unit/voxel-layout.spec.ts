@@ -108,7 +108,9 @@ describe('buildQrLayout', () => {
   it('stands the sculpture on the plinth, inside the code footprint', () => {
     const layout = layoutFor('city', 1400);
     const qrRadius = layout.qrWorldSize / 2;
-    const decorative = layout.instances.filter((instance) => !instance.isQrModule);
+    const decorative = layout.instances.filter(
+      (instance) => !instance.isQrModule && !instance.isPedestal,
+    );
     expect(decorative.length).toBeGreaterThan(100);
     for (const instance of decorative) {
       const [x, y, z] = instance.sculpturePosition;
@@ -120,13 +122,34 @@ describe('buildQrLayout', () => {
   it('sends every sculpture cube into a dark module and fades it out', () => {
     const layout = layoutFor('island');
     for (const instance of layout.instances) {
-      if (instance.isQrModule) continue;
+      if (instance.isQrModule || instance.isPedestal) continue;
       expect(instance.qrScale).toBe(0);
       const [x, y, z] = instance.qrPosition;
       expect(y).toBeCloseTo(TILE_HEIGHT / 2, 10);
       const column = Math.round(x / MODULE_SPACING + matrix.size / 2 - 0.5);
       const row = Math.round(z / MODULE_SPACING + matrix.size / 2 - 0.5);
       expect(moduleAt(matrix, row, column)).toBe(true);
+    }
+  });
+
+  it('grounds each finder square in decorative scenery that fades, not code', () => {
+    const layout = layoutFor('island');
+    const pedestals = layout.instances.filter((instance) => instance.isPedestal);
+    expect(pedestals.length).toBeGreaterThan(50);
+
+    const qrRadius = layout.qrWorldSize / 2;
+    for (const instance of pedestals) {
+      // Decoration: it vanishes at scan time and never claims a module.
+      expect(instance.isQrModule).toBe(false);
+      expect(instance.qrScale).toBe(0);
+      // It is the ground under a square, so it stays put rather than diving
+      // into the code the way an absorbed sculpture cube does.
+      expect(instance.qrPosition).toEqual(instance.sculpturePosition);
+      // And it sits below the module plane, inside the presentation area.
+      expect(instance.sculpturePosition[1]).toBeLessThan(0);
+      expect(Math.hypot(instance.sculpturePosition[0], instance.sculpturePosition[2])).toBeLessThan(
+        qrRadius * 1.2,
+      );
     }
   });
 

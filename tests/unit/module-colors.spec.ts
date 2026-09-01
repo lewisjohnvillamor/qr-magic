@@ -42,3 +42,20 @@ describe('module mosaic colours', () => {
     expect(ramp.structural).toContain(structural);
   });
 });
+
+describe('contrast floors', () => {
+  it('keeps mosaic modules well clear of the text-contrast threshold', () => {
+    // 5:1 is comfortable for text and thin for a QR module: a lightly-tinted
+    // module on a glare-lit screen is exactly the one a binarizer misreads.
+    expect(MIN_MODULE_CONTRAST).toBeGreaterThanOrEqual(7);
+    expect(MIN_STRUCTURAL_CONTRAST).toBeGreaterThan(MIN_MODULE_CONTRAST);
+  });
+
+  it('leaves the solid pair stronger still, for the 2D fallback', () => {
+    // The fallback runs where WebGL could not, so it uses this pair rather
+    // than the mosaic.
+    for (const id of THEME_IDS) {
+      expect(resolveQrColors(getTheme(id)).ratio).toBeGreaterThanOrEqual(12);
+    }
+  });
+});

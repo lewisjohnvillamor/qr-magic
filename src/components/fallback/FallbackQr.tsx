@@ -6,8 +6,6 @@ export interface FallbackQrProps {
   matrix: QrMatrix;
   foreground: string;
   background: string;
-  /** Optional per-module mosaic colour, for visual parity with the 3D scene. */
-  moduleColor?: (row: number, column: number) => string;
   /** Explains why the 2D code is being shown. */
   reason: string;
 }
@@ -15,23 +13,20 @@ export interface FallbackQrProps {
 /**
  * The guaranteed-working 2D code.
  *
- * Shown when WebGL is unavailable, and used by the e2e suite as the reference
- * against which the rendered 3D code is compared.
+ * Shown when WebGL is unavailable — that is, on the weakest devices, and often
+ * the poorest screens. It deliberately drops the theme mosaic and uses the
+ * solid contrast-guaranteed pair (15:1 or better on every theme, against the
+ * mosaic's 7:1 floor). This is the path that has to work when nothing else
+ * did; decoration is the wrong trade here.
  */
-export function FallbackQr({
-  matrix,
-  foreground,
-  background,
-  moduleColor,
-  reason,
-}: FallbackQrProps) {
+export function FallbackQr({ matrix, foreground, background, reason }: FallbackQrProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     const context = canvasRef.current?.getContext('2d');
     if (!context) return;
-    drawCanonicalQr(context, matrix, { foreground, background, moduleColor, modulePixels: 10 });
-  }, [matrix, foreground, background, moduleColor]);
+    drawCanonicalQr(context, matrix, { foreground, background, modulePixels: 10 });
+  }, [matrix, foreground, background]);
 
   return (
     <div className="fallback" data-testid="fallback-qr">

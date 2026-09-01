@@ -12,13 +12,18 @@ import type { Theme } from './themes';
  * darkened, colour by colour, until it clears the floor below, giving a warm
  * mosaic (autumn oranges, neon violets, glacier blues) that still scans.
  *
- * The floors are deliberately above what binarizers need — and the e2e decode
- * matrix, which screenshots and decodes every theme, remains the actual gate.
+ * The floors were originally 5:1 and 6.5:1, which is comfortable for text and
+ * thin for a QR module: a lightly-tinted module on a cheap or glare-lit screen
+ * is exactly the one a binarizer misreads. They are now 7:1 and 9:1, which
+ * still leaves plenty of hue — the colours simply run deeper.
+ *
+ * The e2e decode matrix, which screenshots and decodes every theme, remains
+ * the actual gate.
  */
-export const MIN_MODULE_CONTRAST = 5;
+export const MIN_MODULE_CONTRAST = 7;
 
 /** Finder and timing patterns drive detection, so they sit darker still. */
-export const MIN_STRUCTURAL_CONTRAST = 6.5;
+export const MIN_STRUCTURAL_CONTRAST = 9;
 
 const BLACK: Rgb = { r: 0, g: 0, b: 0 };
 
@@ -50,7 +55,7 @@ export function buildModuleRamp(theme: Theme, background: string): ModuleRamp {
   for (const base of bases) {
     const safe = darkenUntil(base, background, MIN_MODULE_CONTRAST);
     if (!data.includes(safe)) data.push(safe);
-    const deeper = darkenUntil(safe, background, MIN_MODULE_CONTRAST + 1.5);
+    const deeper = darkenUntil(safe, background, MIN_MODULE_CONTRAST + 2.5);
     if (!data.includes(deeper)) data.push(deeper);
   }
   const structural = bases

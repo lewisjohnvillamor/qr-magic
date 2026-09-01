@@ -6,8 +6,9 @@ By **Lewis John Villamor**
 
 ![VoxelQR — a voxel island standing on its QR base](docs/media/app-idle.jpg)
 
-VoxelQR renders a link as a voxel sculpture with three voxel finder squares
-resting around it — no platform, no visible code. Press the sculpture and the
+VoxelQR renders a link as a voxel sculpture with three small voxel plots
+resting around it — the finder squares, grounded in scenery built from the same
+palette. No platform, no visible code. Press the sculpture and the
 camera tilts to a perfect top-down view while the code grows out of the ground
 and the sculpture is absorbed into it. Press **Return to sculpture** and the
 same timeline runs backwards.
@@ -137,6 +138,15 @@ a module budget, never dropping below `M` (15% recovery, the usual print
 default). Short links keep `H` and lose nothing; the long link gained roughly
 6.7x more scanning distance. `tests/e2e/scan-margin.spec.ts` locks that in — pin
 the level back to `H` and it fails.
+
+The same measurement drove two more decisions. The mosaic's contrast floors were
+raised from 5:1 and 6.5:1 to **7:1 and 9:1** — 5:1 is comfortable for text and
+thin for a QR module, and a lightly-tinted module on a glare-lit screen is
+exactly the one a binarizer misreads. And the 2D fallback drops the mosaic
+entirely for the solid contrast-guaranteed pair (**15:1 or better** on every
+theme): it renders where WebGL could not, on the weakest devices and often the
+poorest screens, so decoration is the wrong trade. It decodes down to 25% of
+capture size, guarded by its own test.
 
 ---
 
