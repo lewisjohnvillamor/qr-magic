@@ -20,7 +20,7 @@ export interface Theme {
   ink: string;
   /** Ambient / key light tints. */
   lights: { ambient: string; key: string; rim: string };
-  /** Fog distances, expressed as multiples of the sculpture radius. */
+  /** Fog distances, expressed as fractions of the current viewing distance. */
   fog: { color: string; near: number; far: number };
   particles: ParticleKind;
   /** Requested QR colours; always passed through the contrast guarantee. */
@@ -37,7 +37,7 @@ const THEME_LIST: Theme[] = [
     accent: '#2f5a2b',
     ink: '#1b2a18',
     lights: { ambient: '#e6f0d5', key: '#fff6e0', rim: '#9ecf7a' },
-    fog: { color: '#dce7c6', near: 2.6, far: 9 },
+    fog: { color: '#dce7c6', near: 0.55, far: 2.2 },
     particles: 'pollen',
     qr: { foreground: '#16240f', background: '#f6f7ec' },
   },
@@ -50,7 +50,7 @@ const THEME_LIST: Theme[] = [
     accent: '#22d3ee',
     ink: '#e8e6ff',
     lights: { ambient: '#2a1b4d', key: '#c4b5fd', rim: '#22d3ee' },
-    fog: { color: '#0a0714', near: 2.4, far: 8.5 },
+    fog: { color: '#0a0714', near: 0.5, far: 2.1 },
     particles: 'grid',
     qr: { foreground: '#07040d', background: '#e6faff' },
   },
@@ -63,7 +63,7 @@ const THEME_LIST: Theme[] = [
     accent: '#4d6fb0',
     ink: '#1c2440',
     lights: { ambient: '#eef3ff', key: '#ffffff', rim: '#b7c8ff' },
-    fog: { color: '#e6ecfb', near: 2.6, far: 9.5 },
+    fog: { color: '#e6ecfb', near: 0.55, far: 2.3 },
     particles: 'shimmer',
     qr: { foreground: '#141a2e', background: '#f8faff' },
   },
@@ -76,7 +76,7 @@ const THEME_LIST: Theme[] = [
     accent: '#ffb27a',
     ink: '#ffeede',
     lights: { ambient: '#4a1f45', key: '#ffd0a1', rim: '#ff6b95' },
-    fog: { color: '#3a1636', near: 2.4, far: 8.8 },
+    fog: { color: '#3a1636', near: 0.5, far: 2.15 },
     particles: 'fog',
     qr: { foreground: '#2a0f1e', background: '#fff3e6' },
   },
@@ -89,7 +89,7 @@ const THEME_LIST: Theme[] = [
     accent: '#3f5972',
     ink: '#17222e',
     lights: { ambient: '#eaf1f7', key: '#ffffff', rim: '#a8c2dd' },
-    fog: { color: '#d3dde7', near: 2.6, far: 9 },
+    fog: { color: '#d3dde7', near: 0.55, far: 2.2 },
     particles: 'snow',
     qr: { foreground: '#101a24', background: '#fbfdff' },
   },
@@ -102,7 +102,7 @@ const THEME_LIST: Theme[] = [
     accent: '#111111',
     ink: '#121212',
     lights: { ambient: '#f2f2f2', key: '#ffffff', rim: '#d8d8d8' },
-    fog: { color: '#eeeeec', near: 2.8, far: 10 },
+    fog: { color: '#eeeeec', near: 0.6, far: 2.4 },
     particles: 'none',
     qr: { foreground: '#111111', background: '#f7f4ec' },
   },

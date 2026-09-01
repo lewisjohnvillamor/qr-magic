@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react';
 import type { RefObject } from 'react';
-import { Canvas, useThree } from '@react-three/fiber';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { QrMatrix } from '../../qr/generate-matrix';
 import type { SculptureId } from '../../voxel/types';
@@ -29,20 +29,32 @@ export interface VoxelSceneProps {
 }
 
 /**
- * Atmosphere, scaled to the subject.
+ * Atmosphere, tied to the viewing distance.
  *
- * Fog distances are derived from the sculpture's own size rather than fixed in
- * world units: a fixed near plane that flatters a small sculpture will bury a
- * large one in haze.
+ * Fog distances follow the camera rather than sitting at fixed world-space
+ * depths. The camera travels a long way back to frame the QR, and a fixed fog
+ * range that flatters the sculpture would bury the cubes in haze precisely
+ * during the convergence — the one moment the transformation has to read.
  */
-function SceneAtmosphere({ theme, radius }: { theme: Theme; radius: number }) {
-  const { scene } = useThree();
+function SceneAtmosphere({ theme }: { theme: Theme }) {
+  const { scene, camera } = useThree();
+
   useEffect(() => {
-    scene.fog = new THREE.Fog(theme.fog.color, radius * theme.fog.near, radius * theme.fog.far);
+    const fog = new THREE.Fog(theme.fog.color, 1, 2);
+    scene.fog = fog;
     return () => {
       scene.fog = null;
     };
-  }, [scene, theme, radius]);
+  }, [scene, theme]);
+
+  useFrame(() => {
+    const fog = scene.fog;
+    if (!(fog instanceof THREE.Fog)) return;
+    const distance = camera.position.length();
+    fog.near = distance * theme.fog.near;
+    fog.far = distance * theme.fog.far;
+  });
+
   return null;
 }
 
@@ -86,7 +98,7 @@ function SceneContents({
 
   return (
     <>
-      <SceneAtmosphere theme={theme} radius={lightRadius} />
+      <SceneAtmosphere theme={theme} />
       <CameraRig
         qrWorldSize={layout.qrWorldSize}
         extent={extent}
