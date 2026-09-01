@@ -38,13 +38,32 @@ export async function openExperience(page: Page, options: ExperienceOptions): Pr
   await page.waitForTimeout(400);
 }
 
+/**
+ * Wait until the scene stops changing.
+ *
+ * The phase flips to scan-ready when the timeline completes, but the renderer
+ * may still be presenting the last frames — and under a software rasteriser
+ * with several workers competing, "a couple of frames" is not a fixed number
+ * of milliseconds. Comparing successive captures waits for the thing actually
+ * required (a motionless code) rather than guessing at a delay.
+ */
+export async function waitForStableScene(page: Page, timeoutMs = 15_000): Promise<Buffer> {
+  const deadline = Date.now() + timeoutMs;
+  let previous = await screenshotScene(page);
+  while (Date.now() < deadline) {
+    await page.waitForTimeout(150);
+    const current = await screenshotScene(page);
+    if (Buffer.compare(previous, current) === 0) return current;
+    previous = current;
+  }
+  return previous;
+}
+
 /** Reveal the QR and wait for the locked, motionless scan-ready state. */
 export async function revealAndSettle(page: Page): Promise<void> {
   await page.getByTestId('reveal-button').click();
   await page.getByTestId('phase').filter({ hasText: 'scan-ready' }).waitFor({ timeout: 20_000 });
-  // The timeline has finished; give the renderer a couple of frames to present
-  // the final state before the screenshot is taken.
-  await page.waitForTimeout(600);
+  await waitForStableScene(page);
 }
 
 /** Screenshot just the WebGL canvas. */

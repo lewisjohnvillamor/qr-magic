@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { RefObject } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
@@ -9,8 +9,10 @@ import type { QualityProfile } from '../../lib/quality';
 import type { RevealValues } from '../../animation/create-reveal-timeline';
 import { buildQrLayout } from '../../voxel/build-qr-layout';
 import { hashString } from '../../voxel/rng';
+import { buildModuleRamp, moduleColorAt } from '../../themes/module-colors';
+import { isProtectedModule } from '../../qr/generate-matrix';
 import { InstancedVoxels } from '../../voxel/instanced-voxels';
-import { QrBackingPlane } from './QrBackingPlane';
+import { QrBasePlane } from './QrBackingPlane';
 import { CameraRig } from './CameraRig';
 import { Particles } from './Particles';
 
@@ -24,6 +26,8 @@ export interface VoxelSceneProps {
   values: RefObject<RevealValues | null>;
   /** Pixels of the viewport covered by the control panel. */
   bottomInset: number;
+  /** Constant inset the scan pose frames against (see `CameraRig`). */
+  scanInset: number;
   /** Pauses rendering entirely when the document is hidden. */
   active: boolean;
 }
@@ -32,9 +36,9 @@ export interface VoxelSceneProps {
  * Atmosphere, tied to the viewing distance.
  *
  * Fog distances follow the camera rather than sitting at fixed world-space
- * depths. The camera travels a long way back to frame the QR, and a fixed fog
- * range that flatters the sculpture would bury the cubes in haze precisely
- * during the convergence — the one moment the transformation has to read.
+ * depths. The camera travels a long way up to frame the code, and a fixed fog
+ * range that flatters the sculpture would bury the base in haze precisely
+ * during the reveal — the one moment the scene has to read.
  */
 function SceneAtmosphere({ theme }: { theme: Theme }) {
   const { scene, camera } = useThree();
@@ -66,6 +70,7 @@ function SceneContents({
   qrForeground,
   qrBackground,
   bottomInset,
+  scanInset,
   values,
   pointer,
 }: VoxelSceneProps & { pointer: RefObject<{ x: number; y: number }> }) {
@@ -80,40 +85,46 @@ function SceneContents({
     [matrix, sculpture, quality.sculptureCount],
   );
 
-  /** Separate horizontal and vertical extents: a city is wide and flat, a
-   * crystal is tall and narrow, and one radius flatters neither. */
-  const extent = useMemo(() => {
-    let radiusXZ = 1;
-    let halfHeight = 1;
+  /** Highest point of the sculpture standing on the base. */
+  const sculptureTop = useMemo(() => {
+    let top = 1;
     for (const instance of layout.instances) {
-      if (!instance.isQrModule && instance.sculptureScale === 0) continue;
-      const [x, y, z] = instance.sculpturePosition;
-      radiusXZ = Math.max(radiusXZ, Math.hypot(x, z));
-      halfHeight = Math.max(halfHeight, Math.abs(y));
+      if (instance.isQrModule) continue;
+      top = Math.max(top, instance.sculpturePosition[1]);
     }
-    return { radiusXZ, halfHeight };
+    return top;
   }, [layout]);
 
-  const lightRadius = Math.max(extent.radiusXZ, extent.halfHeight);
+  const lightRadius = Math.max(layout.qrWorldSize / 2, sculptureTop);
+
+  /** The mosaic: deterministic per-module theme colours, contrast-floored, and
+   * identical between the base plane and the raised tiles. */
+  const moduleColor = useMemo(() => {
+    const ramp = buildModuleRamp(theme, qrBackground);
+    const seed = hashString(`${matrix.value}:${theme.id}`);
+    return (row: number, column: number) =>
+      moduleColorAt(ramp, seed, row, column, isProtectedModule(matrix, row, column));
+  }, [theme, qrBackground, matrix]);
 
   return (
     <>
       <SceneAtmosphere theme={theme} />
       <CameraRig
         qrWorldSize={layout.qrWorldSize}
-        extent={extent}
+        sculptureTop={sculptureTop}
         bottomInset={bottomInset}
+        scanInset={scanInset}
         values={values}
         pointer={pointer}
       />
 
       <ambientLight color={theme.lights.ambient} intensity={0.62} />
-      {/* Lights are placed relative to the sculpture: a fixed position that
-          flatters a small crystal sits inside a large city. */}
+      {/* Lights are placed relative to the scene: a fixed position that
+          flatters a small base sits inside a large one. */}
       <directionalLight
         color={theme.lights.key}
         intensity={1.85}
-        position={[lightRadius * 0.6, lightRadius * 1.3, lightRadius * 0.9]}
+        position={[lightRadius * 0.6, lightRadius * 1.4, lightRadius * 0.9]}
         castShadow={quality.shadows}
         shadow-mapSize-width={1024}
         shadow-mapSize-height={1024}
@@ -129,23 +140,27 @@ function SceneContents({
       <directionalLight
         color={theme.lights.rim}
         intensity={0.65}
-        position={[-lightRadius, -lightRadius * 0.35, -lightRadius * 0.8]}
+        position={[-lightRadius, lightRadius * 0.4, -lightRadius * 0.8]}
+      />
+
+      {/* The code is the ground: base plane first, tiles and sculpture above. */}
+      <QrBasePlane
+        matrix={matrix}
+        foreground={qrForeground}
+        background={qrBackground}
+        moduleColor={moduleColor}
+        values={values}
       />
 
       <InstancedVoxels
         layout={layout}
         palette={theme.voxels}
         qrForeground={qrForeground}
+        qrBackground={qrBackground}
+        moduleColor={moduleColor}
         values={values}
         pointer={pointer}
         castShadow={quality.shadows}
-      />
-
-      <QrBackingPlane
-        matrix={matrix}
-        foreground={qrForeground}
-        background={qrBackground}
-        values={values}
       />
 
       <Particles
@@ -168,6 +183,22 @@ function SceneContents({
 export function VoxelScene(props: VoxelSceneProps) {
   const pointer = useRef({ x: 0, y: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
+  const [onScreen, setOnScreen] = useState(true);
+
+  // An embed scrolled out of view must not keep rendering: pause the loop
+  // whenever less than a sliver of the canvas is visible.
+  useEffect(() => {
+    const element = containerRef.current;
+    if (!element || typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) setOnScreen(entry.isIntersecting);
+      },
+      { threshold: 0.02 },
+    );
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     const element = containerRef.current;
@@ -182,27 +213,30 @@ export function VoxelScene(props: VoxelSceneProps) {
       pointer.current.x = 0;
       pointer.current.y = 0;
     };
-    element.addEventListener('pointermove', handleMove, { passive: true });
-    element.addEventListener('pointerleave', handleLeave);
+    // Tracked on the window rather than the canvas: the reveal control sits on
+    // top of the scene, and a listener on the canvas would stop receiving
+    // moves the moment the pointer crossed it.
+    window.addEventListener('pointermove', handleMove, { passive: true });
+    window.addEventListener('pointerleave', handleLeave);
     return () => {
-      element.removeEventListener('pointermove', handleMove);
-      element.removeEventListener('pointerleave', handleLeave);
+      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointerleave', handleLeave);
     };
   }, []);
 
   return (
     <div ref={containerRef} className="scene" data-testid="voxel-scene">
       <Canvas
-        frameloop={props.active ? 'always' : 'never'}
+        frameloop={props.active && onScreen ? 'always' : 'never'}
         dpr={[1, props.quality.maxDpr]}
         shadows={props.quality.shadows}
-        camera={{ fov: 42, position: [0, 4, 30] }}
+        camera={{ fov: 40, position: [18, 22, 32] }}
         gl={{
           antialias: props.quality.antialias,
           alpha: true,
           powerPreference: 'high-performance',
-          // The e2e decode suite screenshots the live canvas, which requires the
-          // drawing buffer to still hold the last frame.
+          // The e2e decode suite screenshots the live canvas, which requires
+          // the drawing buffer to still hold the last frame.
           preserveDrawingBuffer: true,
         }}
         onCreated={({ gl }) => {

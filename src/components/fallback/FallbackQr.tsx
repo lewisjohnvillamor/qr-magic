@@ -13,8 +13,11 @@ export interface FallbackQrProps {
 /**
  * The guaranteed-working 2D code.
  *
- * Shown when WebGL is unavailable, and used by the e2e suite as the reference
- * against which the rendered 3D code is compared.
+ * Shown when WebGL is unavailable — that is, on the weakest devices, and often
+ * the poorest screens. It deliberately drops the theme mosaic and uses the
+ * solid contrast-guaranteed pair (15:1 or better on every theme, against the
+ * mosaic's 7:1 floor). This is the path that has to work when nothing else
+ * did; decoration is the wrong trade here.
  */
 export function FallbackQr({ matrix, foreground, background, reason }: FallbackQrProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);

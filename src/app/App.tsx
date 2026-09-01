@@ -4,19 +4,35 @@ import { useReveal } from './use-reveal';
 import { ControlPanel } from '../components/controls/ControlPanel';
 import { FallbackQr } from '../components/fallback/FallbackQr';
 import { LiveRegion } from '../components/LiveRegion';
+import { IconButton } from '../components/controls/icons';
 import { getTheme, resolveQrColors } from '../themes/themes';
 import { QUALITY_PROFILES, detectWebglSupport } from '../lib/quality';
 import { prefersReducedMotion, subscribeToReducedMotion } from '../animation/motion-preferences';
 import { useElementHeight } from '../lib/use-element-height';
 import { playCue, disposeAudio } from '../lib/audio';
+import { playAmbient, stopAmbient, disposeAmbient } from '../lib/ambient';
 import { SHARE_PARAM } from '../sharing/share-codec';
 
 const VoxelScene = lazy(() =>
   import('../components/scene/VoxelScene').then((module) => ({ default: module.VoxelScene })),
 );
 
+/** True when the app is running inside someone else's page as a widget. */
+function readEmbedMode(): boolean {
+  if (typeof window === 'undefined') return false;
+  return new URLSearchParams(window.location.search).get('embed') === '1';
+}
+
+/**
+ * Height the scan-ready bar occupies, in CSS pixels. The scan camera frames
+ * against this constant so the locked code never shifts when the editing panel
+ * collapses behind it.
+ */
+const SCAN_INSET = 96;
+
 export function App() {
   const state = useExperienceStore();
+  const [embedMode] = useState(readEmbedMode);
   const theme = getTheme(state.theme);
   const qrColors = useMemo(
     () =>
@@ -54,7 +70,22 @@ export function App() {
     return () => document.removeEventListener('visibilitychange', onVisibility);
   }, []);
 
-  useEffect(() => disposeAudio, []);
+  useEffect(
+    () => () => {
+      disposeAudio();
+      disposeAmbient();
+    },
+    [],
+  );
+
+  // The ambient bed follows the mute toggle and crossfades with the theme.
+  useEffect(() => {
+    if (state.muted) {
+      stopAmbient();
+      return;
+    }
+    playAmbient(state.theme);
+  }, [state.muted, state.theme]);
 
   // ---- theme as CSS custom properties ----
   useEffect(() => {
@@ -91,6 +122,10 @@ export function App() {
   const controller = useReveal({ reducedMotion, onRevealComplete, onReturnComplete });
 
   const handleReveal = useCallback(() => {
+    // The reveal commits whatever is in the field first, so typing a link and
+    // pressing the primary button is the whole flow.
+    const result = useExperienceStore.getState().commitUrl();
+    if (!result.ok) return;
     useExperienceStore.setState({ phase: 'revealing', announcement: 'Revealing the QR code.' });
     playCue('reveal', mutedRef.current);
     controller.reveal();
@@ -131,6 +166,53 @@ export function App() {
     window.history.replaceState(null, '', next.toString());
   }, [shareTargetUrl]);
 
+  /**
+   * Export the current view as a PNG — the email story.
+   *
+   * Email clients strip scripts and iframes, so the live widget cannot run in
+   * an inbox. What works everywhere is an image: capture the sculpture (or the
+   * scan-ready code, which stays scannable straight from the email) and link
+   * the image to the shared experience.
+   */
+  const handleSavePng = useCallback(() => {
+    const canvas = document.querySelector<HTMLCanvasElement>('.scene canvas');
+    if (!canvas) {
+      useExperienceStore.setState({ announcement: 'Nothing to capture on this device.' });
+      return;
+    }
+    const current = useExperienceStore.getState();
+    const name =
+      current.phase === 'scan-ready'
+        ? 'voxelqr-code.png'
+        : `voxelqr-${current.sculpture}-${current.theme}.png`;
+    const link = document.createElement('a');
+    link.href = canvas.toDataURL('image/png');
+    link.download = name;
+    link.click();
+    useExperienceStore.setState({
+      announcement:
+        current.phase === 'scan-ready'
+          ? 'Image saved. This picture is itself a scannable code — it works in an email.'
+          : 'Image saved. Reveal the QR first if you want a scannable picture.',
+    });
+  }, []);
+
+  const handleEmbed = useCallback(async () => {
+    const url = new URL(shareTargetUrl);
+    url.searchParams.set('embed', '1');
+    const snippet = `<iframe src="${url.toString()}" width="420" height="420" style="border:0;border-radius:16px;overflow:hidden" loading="lazy" title="VoxelQR — a link as a 3D sculpture that becomes a QR code"></iframe>`;
+    try {
+      await navigator.clipboard.writeText(snippet);
+      useExperienceStore.setState({
+        announcement: 'Embed code copied. Paste it into any page that allows iframes.',
+      });
+    } catch {
+      useExperienceStore.setState({
+        announcement: 'Copying failed — the embed URL is in the address bar with &embed=1.',
+      });
+    }
+  }, [shareTargetUrl]);
+
   const handleShare = useCallback(async () => {
     const shareData = {
       title: 'VoxelQR',
@@ -144,13 +226,93 @@ export function App() {
         return;
       }
       await navigator.clipboard.writeText(shareTargetUrl);
-      useExperienceStore.setState({ announcement: 'Share link copied to the clipboard.' });
+      useExperienceStore.setState({
+        announcement:
+          'Share link copied. It opens the full 3D sculpture, and carries your destination encoded — not encrypted.',
+      });
     } catch {
       useExperienceStore.setState({
         announcement: 'Sharing was cancelled. The link is in the address bar.',
       });
     }
   }, [shareTargetUrl]);
+
+  const scanReady = state.phase === 'scan-ready';
+  const busy = state.phase === 'revealing' || state.phase === 'returning';
+
+  const revealControl = webglSupported ? (
+    <button
+      type="button"
+      className="scene-action"
+      onClick={scanReady ? handleReturn : handleReveal}
+      disabled={busy || Boolean(state.urlError)}
+      aria-label={scanReady ? 'Return to sculpture' : 'Reveal QR'}
+      data-testid="reveal-button"
+    >
+      {/* The hint is the only visible part; the button itself is the sculpture's
+          own space, so the gesture is "press the thing" rather than "find the
+          control". It is still a real focusable button for keyboards and
+          screen readers (spec §16). */}
+      <span className="scene-action-hint" data-hidden={scanReady || busy ? 'true' : 'false'}>
+        Press to reveal the QR
+      </span>
+    </button>
+  ) : null;
+
+  if (embedMode) {
+    return (
+      <div className="app app--embed">
+        {webglSupported ? (
+          <Suspense fallback={null}>
+            <VoxelScene
+              matrix={state.matrix}
+              sculpture={state.sculpture}
+              theme={theme}
+              quality={quality}
+              qrForeground={qrColors.foreground}
+              qrBackground={qrColors.background}
+              values={controller.values}
+              bottomInset={0}
+              scanInset={0}
+              active={documentVisible}
+            />
+          </Suspense>
+        ) : (
+          <FallbackQr
+            matrix={state.matrix}
+            foreground={qrColors.foreground}
+            background={qrColors.background}
+            reason="This device cannot run the 3D scene, so here is the code on its own."
+          />
+        )}
+
+        {revealControl}
+
+        <div className="embed-bar">
+          <a
+            className="embed-attribution"
+            href={shareTargetUrl}
+            target="_blank"
+            rel="noreferrer noopener"
+          >
+            VoxelQR ↗
+          </a>
+          <span className="spacer" />
+          <IconButton
+            icon={state.muted ? 'sound-off' : 'sound-on'}
+            label={state.muted ? 'Sound off' : 'Sound on'}
+            onClick={state.toggleMuted}
+            pressed={!state.muted}
+          />
+        </div>
+
+        <LiveRegion message={state.announcement} />
+        <div className="visually-hidden" data-testid="phase">
+          {state.phase}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="app">
@@ -161,6 +323,14 @@ export function App() {
           VoxelQR<span> — links, sculpted</span>
         </h1>
         <p className="tagline">A link that arrives as a 3D sculpture.</p>
+        <span className="spacer" />
+        <IconButton
+          icon={state.muted ? 'sound-off' : 'sound-on'}
+          label={state.muted ? 'Sound off' : 'Sound on'}
+          onClick={state.toggleMuted}
+          pressed={!state.muted}
+          className="masthead-action"
+        />
       </header>
 
       {webglSupported ? (
@@ -174,6 +344,7 @@ export function App() {
             qrBackground={qrColors.background}
             values={controller.values}
             bottomInset={panelHeight}
+            scanInset={SCAN_INSET}
             active={documentVisible}
           />
         </Suspense>
@@ -186,6 +357,8 @@ export function App() {
         />
       )}
 
+      {scanReady ? null : revealControl}
+
       <ControlPanel
         draftUrl={state.draftUrl}
         urlError={state.urlError}
@@ -195,17 +368,16 @@ export function App() {
         brandForeground={state.brandForeground}
         brandBackground={state.brandBackground}
         phase={state.phase}
-        muted={state.muted}
         contrastAdjusted={qrColors.adjusted}
         onDraftUrlChange={state.setDraftUrl}
         onSubmitUrl={() => state.commitUrl()}
         onSculptureChange={state.setSculpture}
         onThemeChange={state.setTheme}
         onBrandColorsChange={state.setBrandColors}
-        onReveal={handleReveal}
         onReturn={handleReturn}
         onShare={() => void handleShare()}
-        onToggleMute={state.toggleMuted}
+        onEmbed={() => void handleEmbed()}
+        onSavePng={handleSavePng}
       />
 
       <LiveRegion message={state.announcement} />

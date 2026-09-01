@@ -6,6 +6,8 @@ export interface DrawOptions {
   background: string;
   /** Device pixels per QR module. Rounded to an integer so edges stay crisp. */
   modulePixels?: number;
+  /** Optional per-module colour (the mosaic look). Falls back to `foreground`. */
+  moduleColor?: (row: number, column: number) => string;
 }
 
 /**
@@ -34,6 +36,7 @@ export function drawCanonicalQr(
   for (let row = 0; row < matrix.size; row += 1) {
     for (let column = 0; column < matrix.size; column += 1) {
       if (!moduleAt(matrix, row, column)) continue;
+      if (options.moduleColor) context.fillStyle = options.moduleColor(row, column);
       context.fillRect(
         (column + matrix.quietZone) * modulePixels,
         (row + matrix.quietZone) * modulePixels,

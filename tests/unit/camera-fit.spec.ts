@@ -63,3 +63,18 @@ describe('fitFrontalBox', () => {
     expect(Number.isFinite(fit.offsetY)).toBe(true);
   });
 });
+
+describe('scan framing stability', () => {
+  it('frames the scan pose identically however tall the editing panel is', () => {
+    // The scan pose is fitted against a constant inset precisely so that the
+    // panel collapsing at lock cannot move the code. Same inset in, same
+    // framing out — whatever the panel was doing a moment earlier.
+    const scanInset = 96;
+    const a = fitFrontalBox({ ...base, width: 40, height: 40, bottomInset: scanInset });
+    const b = fitFrontalBox({ ...base, width: 40, height: 40, bottomInset: scanInset });
+    expect(a).toEqual(b);
+
+    const tallPanel = fitFrontalBox({ ...base, width: 40, height: 40, bottomInset: 320 });
+    expect(tallPanel.distance).not.toBeCloseTo(a.distance, 3);
+  });
+});

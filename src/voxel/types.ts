@@ -36,6 +36,16 @@ export interface VoxelInstance {
   delay: number;
   /** True when this cube lands on a dark QR module and must be exact. */
   isQrModule: boolean;
+  /** For tiles: the [row, column] of the module this cube is. */
+  module?: [number, number];
+  /** True for the three corner finder squares, which exist at rest. */
+  isFinder?: boolean;
+  /**
+   * True for the decorative ground beneath a finder square. Unlike sculpture
+   * cubes these stay where they are and simply fade, because they are the
+   * scenery the squares sit in rather than something being absorbed.
+   */
+  isPedestal?: boolean;
   /** Restrained random offset used during the scatter stage. */
   scatter: [number, number, number];
 }

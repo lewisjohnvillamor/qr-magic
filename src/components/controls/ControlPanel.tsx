@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { ChipGroup } from './ChipGroup';
+import { IconButton } from './icons';
 import { SCULPTURES } from '../../voxel/types';
 import type { SculptureId } from '../../voxel/types';
 import { THEME_IDS, THEMES } from '../../themes/themes';
@@ -16,17 +17,16 @@ export interface ControlPanelProps {
   brandForeground: string;
   brandBackground: string;
   phase: Phase;
-  muted: boolean;
   contrastAdjusted: boolean;
   onDraftUrlChange: (value: string) => void;
   onSubmitUrl: () => void;
   onSculptureChange: (value: SculptureId) => void;
   onThemeChange: (value: ThemeId) => void;
   onBrandColorsChange: (foreground: string, background: string) => void;
-  onReveal: () => void;
   onReturn: () => void;
   onShare: () => void;
-  onToggleMute: () => void;
+  onEmbed: () => void;
+  onSavePng: () => void;
 }
 
 const SCULPTURE_OPTIONS = SCULPTURES.map((sculpture) => ({
@@ -42,103 +42,149 @@ const THEME_OPTIONS = THEME_IDS.map((id) => ({
 }));
 
 /**
- * Every product action, reachable without touching the canvas (spec §16).
+ * The bottom stack: a card holding the link and its three icon actions, with
+ * the sculpture and theme pickers as a footer beneath it.
+ *
+ * Reveal is not here — it lives on the scene itself, where the sculpture is
+ * (spec §11). Everything that remains is either the one thing you type or a
+ * quiet action you take afterwards, so the interface stops competing with the
+ * thing it is presenting.
  */
 export function ControlPanel(props: ControlPanelProps) {
-  const [shareLabel, setShareLabel] = useState('Share');
+  const [shareCopied, setShareCopied] = useState(false);
+  const [embedCopied, setEmbedCopied] = useState(false);
   const scanReady = props.phase === 'scan-ready';
-  const busy = props.phase === 'revealing' || props.phase === 'returning';
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
     props.onSubmitUrl();
   };
 
-  const handleShare = () => {
-    props.onShare();
-    setShareLabel('Link copied');
-    window.setTimeout(() => setShareLabel('Share'), 2400);
+  const flash = (setter: (value: boolean) => void) => {
+    setter(true);
+    window.setTimeout(() => setter(false), 2400);
   };
 
-  const hintTone = props.urlError ? 'error' : props.urlIsDense ? 'warn' : 'info';
-  const hintText = props.urlError
-    ? props.urlError
-    : props.urlIsDense
-      ? 'This link is long, so the code is dense. Scan from a little closer.'
-      : 'Your link never leaves this browser — the code is generated locally.';
+  const handleShare = () => {
+    props.onShare();
+    flash(setShareCopied);
+  };
 
+  const handleEmbed = () => {
+    props.onEmbed();
+    flash(setEmbedCopied);
+  };
+
+  const actions = (
+    <div className="card-actions">
+      <IconButton
+        icon={shareCopied ? 'check' : 'share'}
+        label={shareCopied ? 'Link copied' : 'Share'}
+        title={
+          shareCopied
+            ? 'Link copied'
+            : 'Share — the link opens the full 3D sculpture, and carries your destination encoded, not encrypted'
+        }
+        onClick={handleShare}
+      />
+      <IconButton
+        icon={embedCopied ? 'check' : 'embed'}
+        label={embedCopied ? 'Code copied' : 'Embed'}
+        onClick={handleEmbed}
+      />
+      <IconButton icon="download" label="Save image" onClick={props.onSavePng} />
+    </div>
+  );
+
+  // Scan-ready: everything but the code gets out of the way.
   if (scanReady) {
     return (
       <div className="panel panel--compact">
-        <div className="panel-inner">
-          <div className="actions">
-            <p className="scan-cue">
-              <strong>Scan now</strong>
-              <span>Point a camera at the code.</span>
-            </p>
-            <span className="spacer" />
-            <button type="button" className="button" onClick={handleShare}>
-              {shareLabel}
-            </button>
-            <button type="button" className="button button--primary" onClick={props.onReturn}>
-              Return to sculpture
-            </button>
-          </div>
+        <div className="panel-card">
+          <p className="scan-cue">
+            <strong>Scan now</strong>
+            <span>Point a camera at the code.</span>
+          </p>
+          <span className="spacer" />
+          {actions}
+          <button type="button" className="button button--primary" onClick={props.onReturn}>
+            Return to sculpture
+          </button>
         </div>
       </div>
     );
   }
 
+  /**
+   * The hint line speaks only when it has something to say.
+   *
+   * It used to carry a standing note about local generation and share-link
+   * privacy. That is worth disclosing, but not worth a permanent line of text
+   * under the field — so the disclosure moved to the moment it matters: the
+   * Share button's tooltip, and the announcement made when a link is copied.
+   */
+  const hintText = props.urlError
+    ? props.urlError
+    : props.urlIsDense
+      ? 'This link is long, so the code is dense. Scan from a little closer.'
+      : null;
+  const hintTone = props.urlError ? 'error' : 'warn';
+
   return (
     <div className="panel">
-      <div className="panel-inner">
+      <div className="panel-card">
         <form className="field" onSubmit={handleSubmit} noValidate>
-          <label className="field-label" htmlFor="destination-url">
+          {/* The placeholder says what this is; the label is kept for screen
+              readers rather than spending a line of the card on it. */}
+          <label className="visually-hidden" htmlFor="destination-url">
             Destination link
           </label>
-          <div className="field-row">
-            <input
-              id="destination-url"
-              className="url-input"
-              type="url"
-              inputMode="url"
-              autoComplete="url"
-              spellCheck={false}
-              placeholder="example.com/your-page"
-              value={props.draftUrl}
-              aria-invalid={props.urlError ? 'true' : 'false'}
-              aria-describedby="url-hint"
-              onChange={(event) => props.onDraftUrlChange(event.target.value)}
-              onBlur={props.onSubmitUrl}
-            />
-            <button type="submit" className="button">
-              Update code
-            </button>
-          </div>
-          <p className="hint" id="url-hint" data-tone={hintTone}>
-            {props.urlError ? (
-              <span className="hint-icon" aria-hidden="true">
-                ⚠
-              </span>
-            ) : null}
-            {hintText}
-          </p>
+          <input
+            id="destination-url"
+            className="url-input"
+            type="url"
+            inputMode="url"
+            autoComplete="url"
+            spellCheck={false}
+            placeholder="Paste a link — example.com/your-page"
+            value={props.draftUrl}
+            aria-invalid={props.urlError ? 'true' : 'false'}
+            {...(hintText ? { 'aria-describedby': 'url-hint' } : {})}
+            onChange={(event) => props.onDraftUrlChange(event.target.value)}
+            onBlur={props.onSubmitUrl}
+          />
+          {/* Enter in the field commits the link. */}
+          <button type="submit" className="visually-hidden">
+            Update code
+          </button>
         </form>
+        {actions}
+      </div>
 
-        <div className="options">
-          <ChipGroup
-            legend="Sculpture"
-            value={props.sculpture}
-            options={SCULPTURE_OPTIONS}
-            onChange={props.onSculptureChange}
-          />
-          <ChipGroup
-            legend="Theme"
-            value={props.theme}
-            options={THEME_OPTIONS}
-            onChange={props.onThemeChange}
-          />
-        </div>
+      {hintText ? (
+        <p className="hint" id="url-hint" data-tone={hintTone}>
+          {props.urlError ? (
+            <span className="hint-icon" aria-hidden="true">
+              ⚠
+            </span>
+          ) : null}
+          {hintText}
+        </p>
+      ) : null}
+
+      <div className="panel-footer">
+        <ChipGroup
+          legend="Theme"
+          value={props.theme}
+          options={THEME_OPTIONS}
+          onChange={props.onThemeChange}
+        />
+        <ChipGroup
+          legend="Sculpture"
+          value={props.sculpture}
+          options={SCULPTURE_OPTIONS}
+          onChange={props.onSculptureChange}
+        />
 
         {props.theme === 'brand' ? (
           <div className="brand-colors">
@@ -169,38 +215,6 @@ export function ControlPanel(props: ControlPanelProps) {
             ) : null}
           </div>
         ) : null}
-
-        <div className="actions">
-          <button
-            type="button"
-            className="button button--primary"
-            onClick={props.onReveal}
-            disabled={busy || Boolean(props.urlError)}
-            data-testid="reveal-button"
-          >
-            Reveal QR
-          </button>
-
-          <button type="button" className="button" onClick={handleShare}>
-            {shareLabel}
-          </button>
-
-          <span className="spacer" />
-
-          <button
-            type="button"
-            className="button button--ghost"
-            onClick={props.onToggleMute}
-            aria-pressed={!props.muted}
-          >
-            {props.muted ? 'Sound off' : 'Sound on'}
-          </button>
-        </div>
-
-        <p className="privacy-note">
-          Share links carry your destination in the address bar. It is encoded, not encrypted —
-          anyone with the link can read it.
-        </p>
       </div>
     </div>
   );

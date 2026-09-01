@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
+  ECC_LADDER,
+  TARGET_MAX_MODULES,
+  chooseErrorCorrectionLevel,
   countDarkModules,
   generateMatrix,
+  isFinderModule,
   isProtectedModule,
   moduleAt,
 } from '../../src/qr/generate-matrix';
@@ -14,6 +18,7 @@ describe('generateMatrix', () => {
     expect(matrix.modules).toHaveLength(matrix.size * matrix.size);
     expect(matrix.quietZone).toBe(4);
     expect(matrix.total).toBe(matrix.size + 8);
+    // A short link fits comfortably, so it keeps the strongest level.
     expect(matrix.errorCorrectionLevel).toBe('H');
   });
 
@@ -65,5 +70,66 @@ describe('generateMatrix', () => {
 
   it('throws for a value that cannot be encoded', () => {
     expect(() => generateMatrix('x'.repeat(20000))).toThrow();
+  });
+
+  describe('adaptive error correction', () => {
+    const medium = 'https://voxelqr.example/campaign/spring-2026?ref=poster&utm_source=print';
+    const long = `https://voxelqr.example/c/${'segment/'.repeat(18)}end`;
+
+    it('keeps the strongest level while the code stays small', () => {
+      expect(chooseErrorCorrectionLevel(URL)).toBe('H');
+      expect(generateMatrix(URL).size).toBeLessThanOrEqual(TARGET_MAX_MODULES);
+    });
+
+    it('steps down rather than let the module count run away', () => {
+      expect(chooseErrorCorrectionLevel(medium)).toBe('Q');
+      expect(generateMatrix(medium).size).toBeLessThan(
+        generateMatrix(medium, { errorCorrectionLevel: 'H' }).size,
+      );
+    });
+
+    it('takes the weakest rung when nothing fits, never below M', () => {
+      expect(chooseErrorCorrectionLevel(long)).toBe('M');
+      // Still a large code, but 23% fewer modules per side than level H, which
+      // is the difference between a scannable code and an unscannable one.
+      expect(generateMatrix(long).size).toBeLessThan(
+        generateMatrix(long, { errorCorrectionLevel: 'H' }).size,
+      );
+    });
+
+    it('never picks a level below the ladder floor', () => {
+      for (const value of [URL, medium, long, `https://e.example/${'a'.repeat(900)}`]) {
+        expect(ECC_LADDER).toContain(chooseErrorCorrectionLevel(value));
+      }
+    });
+
+    it('honours an explicit level', () => {
+      expect(generateMatrix(long, { errorCorrectionLevel: 'H' }).errorCorrectionLevel).toBe('H');
+    });
+
+    it('is deterministic', () => {
+      expect(generateMatrix(long).errorCorrectionLevel).toBe(
+        generateMatrix(long).errorCorrectionLevel,
+      );
+    });
+  });
+});
+
+describe('isFinderModule', () => {
+  const matrix = generateMatrix('https://example.com/finder');
+
+  it('covers exactly the three 7x7 corner squares', () => {
+    let count = 0;
+    for (let r = 0; r < matrix.size; r += 1) {
+      for (let c = 0; c < matrix.size; c += 1) {
+        if (isFinderModule(matrix, r, c)) count += 1;
+      }
+    }
+    expect(count).toBe(3 * 49);
+    expect(isFinderModule(matrix, 0, 0)).toBe(true);
+    expect(isFinderModule(matrix, 6, matrix.size - 1)).toBe(true);
+    expect(isFinderModule(matrix, matrix.size - 1, 6)).toBe(true);
+    expect(isFinderModule(matrix, matrix.size - 1, matrix.size - 1)).toBe(false);
+    expect(isFinderModule(matrix, 8, 8)).toBe(false);
   });
 });

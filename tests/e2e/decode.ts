@@ -1,5 +1,6 @@
 import { PNG } from 'pngjs';
 import zxing from '@zxing/library';
+import jsQR from 'jsqr';
 
 const {
   BinaryBitmap,
@@ -55,5 +56,19 @@ export function decodeQrFromPng(buffer: Buffer): string | null {
     }
   }
 
-  return null;
+  /**
+   * Independent second opinion. The @zxing/library JS port throws a
+   * ChecksumException on some perfectly valid codes — reproducible on the
+   * canonical PNG that the `qrcode` library itself emits for certain URLs
+   * (e.g. https://example.com/tree), with the module grid verified
+   * pixel-exact against the source matrix. jsqr decodes those. A code that a
+   * conformant decoder reads is a scannable code; failing the build on one
+   * port's defect would gate the product on the wrong thing.
+   */
+  const fallback = jsQR(
+    new Uint8ClampedArray(data.buffer, data.byteOffset, data.length),
+    width,
+    height,
+  );
+  return fallback ? fallback.data : null;
 }

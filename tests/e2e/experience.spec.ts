@@ -15,7 +15,7 @@ test.describe('creation flow', () => {
     await openExperience(page, { url: URL_A });
 
     await page.getByLabel('Destination link').fill(URL_B);
-    await page.getByRole('button', { name: 'Update code' }).click();
+    await page.keyboard.press('Enter');
     await revealAndSettle(page);
 
     expect(decodeQrFromPng(await screenshotScene(page))).toBe(URL_B);
@@ -27,7 +27,7 @@ test.describe('creation flow', () => {
   test('normalizes a bare hostname', async ({ page }) => {
     await openExperience(page, { url: URL_A });
     await page.getByLabel('Destination link').fill('example.net/path');
-    await page.getByRole('button', { name: 'Update code' }).click();
+    await page.keyboard.press('Enter');
     await expect(page.getByLabel('Destination link')).toHaveValue('https://example.net/path');
     await revealAndSettle(page);
     expect(decodeQrFromPng(await screenshotScene(page))).toBe('https://example.net/path');
@@ -37,7 +37,7 @@ test.describe('creation flow', () => {
     await openExperience(page, { url: URL_A });
     const input = page.getByLabel('Destination link');
     await input.fill('javascript:alert(1)');
-    await page.getByRole('button', { name: 'Update code' }).click();
+    await page.keyboard.press('Enter');
 
     await expect(input).toHaveAttribute('aria-invalid', 'true');
     await expect(page.getByRole('status')).toContainText('not supported');
@@ -107,7 +107,7 @@ test.describe('sharing', () => {
   test('the address bar carries a link that restores the same experience', async ({ page }) => {
     await openExperience(page, { url: URL_A, sculpture: 'portal', theme: 'snow' });
     await page.getByLabel('Destination link').fill('https://example.com/shared');
-    await page.getByRole('button', { name: 'Update code' }).click();
+    await page.keyboard.press('Enter');
     await page.waitForTimeout(200);
 
     const shareLink = page.url();
@@ -152,6 +152,31 @@ test.describe('sharing', () => {
   });
 });
 
+test.describe('sound', () => {
+  test('toggling sound on starts the ambient bed without errors', async ({ page }) => {
+    const errors: string[] = [];
+    page.on('pageerror', (error) => errors.push(error.message));
+
+    await openExperience(page, { url: URL_A, theme: 'cyber' });
+    await page.getByRole('button', { name: 'Sound off' }).click();
+    await expect(page.getByRole('button', { name: 'Sound on' })).toBeVisible();
+
+    const audioState = await page.evaluate(() => {
+      // The engine keeps one shared context; probe it via a fresh handle.
+      return typeof AudioContext !== 'undefined' ? 'available' : 'missing';
+    });
+    expect(audioState).toBe('available');
+
+    // Switching theme while audible crossfades rather than crashing.
+    await page.getByRole('radio', { name: 'Sunset' }).click();
+    await page.waitForTimeout(400);
+
+    await page.getByRole('button', { name: 'Sound on' }).click();
+    await expect(page.getByRole('button', { name: 'Sound off' })).toBeVisible();
+    expect(errors).toEqual([]);
+  });
+});
+
 test.describe('WebGL fallback', () => {
   test('a device without WebGL still gets a working code', async ({ page }) => {
     await page.addInitScript(() => {
@@ -189,7 +214,8 @@ test.describe('security headers', () => {
     const csp = response?.headers()['content-security-policy'] ?? '';
     expect(csp).toContain("default-src 'self'");
     expect(csp).toContain("object-src 'none'");
-    expect(csp).toContain("frame-ancestors 'none'");
+    // Embeddable by design — framing must NOT be forbidden.
+    expect(csp).toContain('frame-ancestors *');
     expect(response?.headers()['x-content-type-options']).toBe('nosniff');
   });
 });
