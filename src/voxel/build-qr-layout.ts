@@ -87,6 +87,7 @@ export function buildQrLayout(options: LayoutOptions): VoxelLayout {
         // Tiles settle in a ripple travelling outward from the centre.
         delay: Math.min(1, ripple) * 0.5 + rng() * 0.1,
         isQrModule: true,
+        module: [row, column],
         scatter: [0, 0, 0],
       });
     }

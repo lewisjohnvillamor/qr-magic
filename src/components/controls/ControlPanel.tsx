@@ -26,6 +26,7 @@ export interface ControlPanelProps {
   onReveal: () => void;
   onReturn: () => void;
   onShare: () => void;
+  onEmbed: () => void;
   onToggleMute: () => void;
 }
 
@@ -50,6 +51,7 @@ const THEME_OPTIONS = THEME_IDS.map((id) => ({
  */
 export function ControlPanel(props: ControlPanelProps) {
   const [shareLabel, setShareLabel] = useState('Share');
+  const [embedLabel, setEmbedLabel] = useState('Embed');
   const scanReady = props.phase === 'scan-ready';
   const busy = props.phase === 'revealing' || props.phase === 'returning';
 
@@ -62,6 +64,12 @@ export function ControlPanel(props: ControlPanelProps) {
     props.onShare();
     setShareLabel('Link copied');
     window.setTimeout(() => setShareLabel('Share'), 2400);
+  };
+
+  const handleEmbed = () => {
+    props.onEmbed();
+    setEmbedLabel('Code copied');
+    window.setTimeout(() => setEmbedLabel('Embed'), 2400);
   };
 
   const soundButton = (
@@ -201,6 +209,9 @@ export function ControlPanel(props: ControlPanelProps) {
           </p>
           <span className="spacer" />
           {soundButton}
+          <button type="button" className="button button--quiet" onClick={handleEmbed}>
+            {embedLabel}
+          </button>
           <button type="button" className="button" onClick={handleShare}>
             {shareLabel}
           </button>

@@ -19,6 +19,8 @@ export interface InstancedVoxelsProps {
   layout: VoxelLayout;
   palette: readonly string[];
   qrForeground: string;
+  /** Per-module mosaic colour; must match the base plane exactly. */
+  moduleColor: (row: number, column: number) => string;
   values: RefObject<RevealValues | null>;
   /** Pointer influence in normalized device coordinates, -1..1. */
   pointer: RefObject<{ x: number; y: number }>;
@@ -40,6 +42,7 @@ export function InstancedVoxels({
   layout,
   palette,
   qrForeground,
+  moduleColor,
   values,
   pointer,
   castShadow,
@@ -50,6 +53,11 @@ export function InstancedVoxels({
   const clockRef = useRef(0);
   /** Accumulated idle spin; settles onto the nearest right angle at reveal. */
   const yawRef = useRef(0);
+  /** Last reveal values written into the instance buffer. While these are
+   * unchanged (the whole idle state), the per-instance loop is skipped and
+   * animation is carried by the group transform alone — the difference between
+   * ~2,000 matrix composes per frame and zero. */
+  const written = useRef({ morph: -1, scatter: -1, lock: -1, squash: -1 });
 
   const count = layout.instances.length;
 
@@ -108,6 +116,7 @@ export function InstancedVoxels({
 
   const paletteColors = useMemo(() => palette.map((hex) => new THREE.Color(hex)), [palette]);
   const foregroundColor = useMemo(() => new THREE.Color(qrForeground), [qrForeground]);
+  const scratchColor = useMemo(() => new THREE.Color(), []);
 
   // Seed matrices and colours synchronously so the first painted frame is the
   // finished plinth-and-sculpture rather than a pile of cubes at the origin.
@@ -128,14 +137,19 @@ export function InstancedVoxels({
       }
       scratch.matrix.compose(scratch.position, scratch.quaternion, scratch.scale);
       mesh.setMatrixAt(i, scratch.matrix);
-      const color = instance.isQrModule
-        ? foregroundColor
-        : paletteColors[instance.colorIndex % paletteColors.length];
-      if (color) mesh.setColorAt(i, color);
+      if (instance.isQrModule && instance.module) {
+        scratchColor.set(moduleColor(instance.module[0], instance.module[1]));
+        mesh.setColorAt(i, scratchColor);
+      } else {
+        const color = instance.isQrModule
+          ? foregroundColor
+          : paletteColors[instance.colorIndex % paletteColors.length];
+        if (color) mesh.setColorAt(i, color);
+      }
     }
     mesh.instanceMatrix.needsUpdate = true;
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-  }, [count, layout, paletteColors, foregroundColor, scratch]);
+  }, [count, layout, paletteColors, foregroundColor, moduleColor, scratch, scratchColor]);
 
   useFrame((_state, delta) => {
     const mesh = meshRef.current;
@@ -148,6 +162,13 @@ export function InstancedVoxels({
 
     flatUniform.current.value = lock;
 
+    const last = written.current;
+    const dirty =
+      last.morph !== morph ||
+      last.scatter !== scatter ||
+      last.lock !== lock ||
+      last.squash !== squash;
+
     // The whole plinth turns slowly while idle. Spin accumulates only while
     // idle, and settles onto the nearest right angle for the scan state — a
     // right-angle rotation still decodes, an oblique one costs sharpness.
@@ -158,6 +179,12 @@ export function InstancedVoxels({
     const pointerPitch = (pointer.current?.y ?? 0) * -0.06 * idle;
     group.rotation.set(pointerPitch, yaw + pointerYaw, 0);
     group.position.y = idle * Math.sin(time * 0.7) * 0.18;
+
+    if (!dirty) return;
+    last.morph = morph;
+    last.scatter = scatter;
+    last.lock = lock;
+    last.squash = squash;
 
     for (let i = 0; i < count; i += 1) {
       const instance = layout.instances[i];

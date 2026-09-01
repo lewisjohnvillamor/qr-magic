@@ -36,6 +36,8 @@ export interface VoxelInstance {
   delay: number;
   /** True when this cube lands on a dark QR module and must be exact. */
   isQrModule: boolean;
+  /** For tiles: the [row, column] of the module this cube is. */
+  module?: [number, number];
   /** Restrained random offset used during the scatter stage. */
   scatter: [number, number, number];
 }

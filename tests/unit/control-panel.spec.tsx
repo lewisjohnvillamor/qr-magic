@@ -24,6 +24,7 @@ function setup(overrides: Partial<ControlPanelProps> = {}) {
     onReveal: vi.fn(),
     onReturn: vi.fn(),
     onShare: vi.fn(),
+    onEmbed: vi.fn(),
     onToggleMute: vi.fn(),
     ...overrides,
   };

@@ -1,8 +1,17 @@
 # VoxelQR — Production Plan
 
 **Source spec:** _VoxelQR Product and Implementation Specification v1.0_
-**Plan version:** 1.0 · **Status:** executing
-**Shape:** client-only static site. No backend, no database, no accounts.
+**Plan version:** 1.1 · **Status:** shipped, iterating
+
+> **v1.1 revisions (post-review):** the transformation was rebuilt around the
+> ground-base mechanic — the code is the plinth the sculpture stands on, and
+> the reveal is a camera tilt to top-down while the sculpture is absorbed by
+> the code. Modules are coloured per-theme (contrast-floored mosaic) instead
+> of flat near-black. Added: per-theme synthesised ambient loops, an
+> `?embed=1` widget mode with an iframe snippet (CSP allows framing by
+> design), off-screen render pausing, and an idle fast-path that skips the
+> per-instance loop entirely while nothing animates.
+> **Shape:** client-only static site. No backend, no database, no accounts.
 
 ---
 

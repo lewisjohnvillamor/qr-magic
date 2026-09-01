@@ -141,6 +141,40 @@ preview server, `public/_headers` and `vercel.json`.
 
 ---
 
+## Embedding in a website or blog
+
+The whole product works as a widget. Press **Embed** in the app to copy a
+ready-to-paste snippet, or write it by hand:
+
+```html
+<iframe
+  src="https://your-host.example/?experience=<payload>&embed=1"
+  width="420"
+  height="420"
+  style="border: 0; border-radius: 16px; overflow: hidden"
+  loading="lazy"
+  title="VoxelQR — a link as a 3D sculpture that becomes a QR code"
+></iframe>
+```
+
+`embed=1` strips the chrome: just the sculpture on its code, a reveal button
+and a small attribution link back to the full experience. The CSP allows
+framing by design (the app is stateless and cookieless, so there is nothing to
+clickjack), `loading="lazy"` defers the download until the reader scrolls near,
+and the scene stops rendering entirely whenever the iframe is off-screen or the
+tab is hidden — an embed below the fold costs nothing.
+
+## Performance
+
+The scene is drawn in ≤4 draw calls (one `InstancedMesh` for every cube, the
+base plane, one particle cloud), no allocation happens inside the frame loop,
+and while the scene is idle the per-instance loop is skipped entirely — the
+idle animation is carried by a single group transform, so a resting embed costs
+almost no CPU. Rendering pauses when the tab is hidden or the iframe is
+scrolled away. Payload: ~127 KB gzipped before the 3D chunk, ~238 KB more for
+Three.js loaded lazily behind the first paint — comparable to one hero image,
+and cached after the first view.
+
 ## Deployment
 
 Static output in `dist/`. `vercel.json` and `public/_headers` carry matching

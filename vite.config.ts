@@ -13,7 +13,9 @@ const securityHeaders: Record<string, string> = {
     "font-src 'self'",
     "connect-src 'self'",
     "worker-src 'self' blob:",
-    "frame-ancestors 'none'",
+    // Embeddable by design: the app is stateless, cookieless and takes no
+    // privileged actions, so framing carries no clickjacking risk.
+    'frame-ancestors *',
     "base-uri 'self'",
     "form-action 'none'",
     "object-src 'none'",

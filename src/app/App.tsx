@@ -5,6 +5,9 @@ import { ControlPanel } from '../components/controls/ControlPanel';
 import { FallbackQr } from '../components/fallback/FallbackQr';
 import { LiveRegion } from '../components/LiveRegion';
 import { getTheme, resolveQrColors } from '../themes/themes';
+import { buildModuleRamp, moduleColorAt } from '../themes/module-colors';
+import { isProtectedModule } from '../qr/generate-matrix';
+import { hashString } from '../voxel/rng';
 import { QUALITY_PROFILES, detectWebglSupport } from '../lib/quality';
 import { prefersReducedMotion, subscribeToReducedMotion } from '../animation/motion-preferences';
 import { useElementHeight } from '../lib/use-element-height';
@@ -16,8 +19,15 @@ const VoxelScene = lazy(() =>
   import('../components/scene/VoxelScene').then((module) => ({ default: module.VoxelScene })),
 );
 
+/** True when the app is running inside someone else's page as a widget. */
+function readEmbedMode(): boolean {
+  if (typeof window === 'undefined') return false;
+  return new URLSearchParams(window.location.search).get('embed') === '1';
+}
+
 export function App() {
   const state = useExperienceStore();
+  const [embedMode] = useState(readEmbedMode);
   const theme = getTheme(state.theme);
   const qrColors = useMemo(
     () =>
@@ -135,6 +145,14 @@ export function App() {
     useExperienceStore.setState({ phase: 'sculpture' });
   }, [layoutKey, controller]);
 
+  const fallbackModuleColor = useMemo(() => {
+    const ramp = buildModuleRamp(theme, qrColors.background);
+    const seed = hashString(`${state.matrix.value}:${theme.id}`);
+    const matrix = state.matrix;
+    return (row: number, column: number) =>
+      moduleColorAt(ramp, seed, row, column, isProtectedModule(matrix, row, column));
+  }, [theme, qrColors.background, state.matrix]);
+
   const shareTargetUrl = useMemo(
     () => state.shareUrl(window.location.href),
     // Recomputed whenever any part of the shared payload changes.
@@ -149,6 +167,22 @@ export function App() {
     const next = new URL(shareTargetUrl);
     if (url.searchParams.get(SHARE_PARAM) === next.searchParams.get(SHARE_PARAM)) return;
     window.history.replaceState(null, '', next.toString());
+  }, [shareTargetUrl]);
+
+  const handleEmbed = useCallback(async () => {
+    const url = new URL(shareTargetUrl);
+    url.searchParams.set('embed', '1');
+    const snippet = `<iframe src="${url.toString()}" width="420" height="420" style="border:0;border-radius:16px;overflow:hidden" loading="lazy" title="VoxelQR — a link as a 3D sculpture that becomes a QR code"></iframe>`;
+    try {
+      await navigator.clipboard.writeText(snippet);
+      useExperienceStore.setState({
+        announcement: 'Embed code copied. Paste it into any page that allows iframes.',
+      });
+    } catch {
+      useExperienceStore.setState({
+        announcement: 'Copying failed — the embed URL is in the address bar with &embed=1.',
+      });
+    }
   }, [shareTargetUrl]);
 
   const handleShare = useCallback(async () => {
@@ -171,6 +205,66 @@ export function App() {
       });
     }
   }, [shareTargetUrl]);
+
+  if (embedMode) {
+    const scanReady = state.phase === 'scan-ready';
+    const busy = state.phase === 'revealing' || state.phase === 'returning';
+    return (
+      <div className="app app--embed">
+        {webglSupported ? (
+          <Suspense fallback={null}>
+            <VoxelScene
+              matrix={state.matrix}
+              sculpture={state.sculpture}
+              theme={theme}
+              quality={quality}
+              qrForeground={qrColors.foreground}
+              qrBackground={qrColors.background}
+              values={controller.values}
+              bottomInset={0}
+              active={documentVisible}
+            />
+          </Suspense>
+        ) : (
+          <FallbackQr
+            matrix={state.matrix}
+            foreground={qrColors.foreground}
+            background={qrColors.background}
+            moduleColor={fallbackModuleColor}
+            reason="This device cannot run the 3D scene, so here is the code on its own."
+          />
+        )}
+
+        <div className="embed-bar">
+          <a
+            className="embed-attribution"
+            href={shareTargetUrl}
+            target="_blank"
+            rel="noreferrer noopener"
+          >
+            VoxelQR ↗
+          </a>
+          <span className="spacer" />
+          {webglSupported ? (
+            <button
+              type="button"
+              className="button button--primary"
+              onClick={scanReady ? handleReturn : handleReveal}
+              disabled={busy}
+              data-testid="reveal-button"
+            >
+              {scanReady ? 'Back to sculpture' : 'Reveal QR'}
+            </button>
+          ) : null}
+        </div>
+
+        <LiveRegion message={state.announcement} />
+        <div className="visually-hidden" data-testid="phase">
+          {state.phase}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="app">
@@ -202,6 +296,7 @@ export function App() {
           matrix={state.matrix}
           foreground={qrColors.foreground}
           background={qrColors.background}
+          moduleColor={fallbackModuleColor}
           reason="This device cannot run the 3D scene, so here is the code on its own. Everything else still works."
         />
       )}
@@ -225,6 +320,7 @@ export function App() {
         onReveal={handleReveal}
         onReturn={handleReturn}
         onShare={() => void handleShare()}
+        onEmbed={() => void handleEmbed()}
         onToggleMute={state.toggleMuted}
       />
 

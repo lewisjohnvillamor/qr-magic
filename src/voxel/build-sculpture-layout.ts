@@ -90,9 +90,8 @@ const buildCrystal: Builder = ({ count, seed }) => {
   return points;
 };
 
-/** Gift box — walls, a cross ribbon and a small bow. */
-const buildGift: Builder = ({ count, seed }) => {
-  const rng = createRng(seed);
+/** Gift box — solid walls, a cross ribbon and a chunky bow. */
+const buildGift: Builder = ({ count }) => {
   const points: SculpturePoint[] = [];
   const side = Math.max(5, Math.round(Math.cbrt(count * 1.9)));
   const half = (side - 1) / 2;
@@ -105,31 +104,43 @@ const buildGift: Builder = ({ count, seed }) => {
           x === 0 || y === 0 || z === 0 || x === side - 1 || y === side - 1 || z === side - 1;
         if (!onShell) continue;
         const onRibbon = x === Math.round(half) || z === Math.round(half);
-        if (!onRibbon && (x + y + z) % 3 === 1 && rng() > 0.55) continue;
+        // Walls stay solid: carved gaps expose the box's dark interior, which
+        // reads as stray QR modules sprinkled across the sculpture.
         points.push(
           point(
             [(x - half) * gap, (y - half) * gap, (z - half) * gap],
             onRibbon ? 2 : (x + z) % 2,
             [0, 0, 0],
-            onRibbon ? 1.02 : 0.95,
+            onRibbon ? 1.04 : 0.98,
           ),
         );
       }
     }
   }
 
-  // Bow: two small loops on top.
-  const top = half * gap + 0.9;
-  for (let i = 0; i < 14; i += 1) {
-    const angle = (i / 14) * TAU;
-    const r = 1.15;
+  // Bow: two chunky loops and a knot on top.
+  const top = half * gap + 1.1;
+  for (let i = 0; i < 10; i += 1) {
+    const angle = (i / 10) * TAU;
+    const r = 1.5;
     points.push(
-      point([Math.cos(angle) * r - 0.9, top + Math.sin(angle) * 0.5, 0], 2, [0, 0, angle], 0.6),
+      point(
+        [Math.cos(angle) * r - 1.4, top + Math.abs(Math.sin(angle)) * 1.1, 0],
+        2,
+        [0, 0, angle],
+        0.95,
+      ),
     );
     points.push(
-      point([Math.cos(angle) * r + 0.9, top + Math.sin(angle) * 0.5, 0], 2, [0, 0, angle], 0.6),
+      point(
+        [Math.cos(angle) * r + 1.4, top + Math.abs(Math.sin(angle)) * 1.1, 0],
+        2,
+        [0, 0, angle],
+        0.95,
+      ),
     );
   }
+  points.push(point([0, top + 0.4, 0], 2, [0, 0, 0], 1.2));
   return points;
 };
 

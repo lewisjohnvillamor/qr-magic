@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { RefObject } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
@@ -9,6 +9,8 @@ import type { QualityProfile } from '../../lib/quality';
 import type { RevealValues } from '../../animation/create-reveal-timeline';
 import { buildQrLayout } from '../../voxel/build-qr-layout';
 import { hashString } from '../../voxel/rng';
+import { buildModuleRamp, moduleColorAt } from '../../themes/module-colors';
+import { isProtectedModule } from '../../qr/generate-matrix';
 import { InstancedVoxels } from '../../voxel/instanced-voxels';
 import { QrBasePlane } from './QrBackingPlane';
 import { CameraRig } from './CameraRig';
@@ -92,6 +94,15 @@ function SceneContents({
 
   const lightRadius = Math.max(layout.qrWorldSize / 2, sculptureTop);
 
+  /** The mosaic: deterministic per-module theme colours, contrast-floored, and
+   * identical between the base plane and the raised tiles. */
+  const moduleColor = useMemo(() => {
+    const ramp = buildModuleRamp(theme, qrBackground);
+    const seed = hashString(`${matrix.value}:${theme.id}`);
+    return (row: number, column: number) =>
+      moduleColorAt(ramp, seed, row, column, isProtectedModule(matrix, row, column));
+  }, [theme, qrBackground, matrix]);
+
   return (
     <>
       <SceneAtmosphere theme={theme} />
@@ -129,12 +140,18 @@ function SceneContents({
       />
 
       {/* The code is the ground: base plane first, tiles and sculpture above. */}
-      <QrBasePlane matrix={matrix} foreground={qrForeground} background={qrBackground} />
+      <QrBasePlane
+        matrix={matrix}
+        foreground={qrForeground}
+        background={qrBackground}
+        moduleColor={moduleColor}
+      />
 
       <InstancedVoxels
         layout={layout}
         palette={theme.voxels}
         qrForeground={qrForeground}
+        moduleColor={moduleColor}
         values={values}
         pointer={pointer}
         castShadow={quality.shadows}
@@ -160,6 +177,22 @@ function SceneContents({
 export function VoxelScene(props: VoxelSceneProps) {
   const pointer = useRef({ x: 0, y: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
+  const [onScreen, setOnScreen] = useState(true);
+
+  // An embed scrolled out of view must not keep rendering: pause the loop
+  // whenever less than a sliver of the canvas is visible.
+  useEffect(() => {
+    const element = containerRef.current;
+    if (!element || typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) setOnScreen(entry.isIntersecting);
+      },
+      { threshold: 0.02 },
+    );
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     const element = containerRef.current;
@@ -185,7 +218,7 @@ export function VoxelScene(props: VoxelSceneProps) {
   return (
     <div ref={containerRef} className="scene" data-testid="voxel-scene">
       <Canvas
-        frameloop={props.active ? 'always' : 'never'}
+        frameloop={props.active && onScreen ? 'always' : 'never'}
         dpr={[1, props.quality.maxDpr]}
         shadows={props.quality.shadows}
         camera={{ fov: 40, position: [18, 22, 32] }}

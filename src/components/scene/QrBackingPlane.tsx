@@ -7,6 +7,8 @@ export interface QrBasePlaneProps {
   matrix: QrMatrix;
   foreground: string;
   background: string;
+  /** Per-module mosaic colour; must match the tiles exactly. */
+  moduleColor: (row: number, column: number) => string;
 }
 
 /**
@@ -19,14 +21,14 @@ export interface QrBasePlaneProps {
  * between tiles falls on this plane's correct pixels, so the scanning state is
  * exact however the tiles anti-alias.
  */
-export function QrBasePlane({ matrix, foreground, background }: QrBasePlaneProps) {
+export function QrBasePlane({ matrix, foreground, background, moduleColor }: QrBasePlaneProps) {
   const texture = useMemo(() => {
     const canvas = document.createElement('canvas');
     const context = canvas.getContext('2d');
     if (!context) return null;
     // 12 device pixels per module keeps the texture crisp at any sensible
     // on-screen size while staying well inside texture limits.
-    drawCanonicalQr(context, matrix, { foreground, background, modulePixels: 12 });
+    drawCanonicalQr(context, matrix, { foreground, background, moduleColor, modulePixels: 12 });
     const created = new THREE.CanvasTexture(canvas);
     created.magFilter = THREE.NearestFilter;
     created.minFilter = THREE.NearestFilter;
@@ -34,7 +36,7 @@ export function QrBasePlane({ matrix, foreground, background }: QrBasePlaneProps
     created.colorSpace = THREE.SRGBColorSpace;
     created.anisotropy = 1;
     return created;
-  }, [matrix, foreground, background]);
+  }, [matrix, foreground, background, moduleColor]);
 
   useEffect(() => () => texture?.dispose(), [texture]);
 
