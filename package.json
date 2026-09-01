@@ -18,7 +18,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "verify": "npm run format:check && npm run lint && npm run test && npm run build"
+    "verify": "npm run format:check && npm run lint && npm run test && npm run build",
+    "media": "CAPTURE_MEDIA=1 playwright test tests/e2e/media.spec.ts --workers=3"
   },
   "dependencies": {
     "@react-three/fiber": "9.7.0",
