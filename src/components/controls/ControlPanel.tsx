@@ -80,6 +80,11 @@ export function ControlPanel(props: ControlPanelProps) {
       <IconButton
         icon={shareCopied ? 'check' : 'share'}
         label={shareCopied ? 'Link copied' : 'Share'}
+        title={
+          shareCopied
+            ? 'Link copied'
+            : 'Share — the link opens the full 3D sculpture, and carries your destination encoded, not encrypted'
+        }
         onClick={handleShare}
       />
       <IconButton
@@ -110,18 +115,28 @@ export function ControlPanel(props: ControlPanelProps) {
     );
   }
 
-  const hintTone = props.urlError ? 'error' : props.urlIsDense ? 'warn' : 'info';
+  /**
+   * The hint line speaks only when it has something to say.
+   *
+   * It used to carry a standing note about local generation and share-link
+   * privacy. That is worth disclosing, but not worth a permanent line of text
+   * under the field — so the disclosure moved to the moment it matters: the
+   * Share button's tooltip, and the announcement made when a link is copied.
+   */
   const hintText = props.urlError
     ? props.urlError
     : props.urlIsDense
       ? 'This link is long, so the code is dense. Scan from a little closer.'
-      : 'Generated in your browser. Share links carry the destination — encoded, not encrypted.';
+      : null;
+  const hintTone = props.urlError ? 'error' : 'warn';
 
   return (
     <div className="panel">
       <div className="panel-card">
         <form className="field" onSubmit={handleSubmit} noValidate>
-          <label className="field-label" htmlFor="destination-url">
+          {/* The placeholder says what this is; the label is kept for screen
+              readers rather than spending a line of the card on it. */}
+          <label className="visually-hidden" htmlFor="destination-url">
             Destination link
           </label>
           <input
@@ -131,10 +146,10 @@ export function ControlPanel(props: ControlPanelProps) {
             inputMode="url"
             autoComplete="url"
             spellCheck={false}
-            placeholder="example.com/your-page"
+            placeholder="Paste a link — example.com/your-page"
             value={props.draftUrl}
             aria-invalid={props.urlError ? 'true' : 'false'}
-            aria-describedby="url-hint"
+            {...(hintText ? { 'aria-describedby': 'url-hint' } : {})}
             onChange={(event) => props.onDraftUrlChange(event.target.value)}
             onBlur={props.onSubmitUrl}
           />
@@ -146,14 +161,16 @@ export function ControlPanel(props: ControlPanelProps) {
         {actions}
       </div>
 
-      <p className="hint" id="url-hint" data-tone={hintTone}>
-        {props.urlError ? (
-          <span className="hint-icon" aria-hidden="true">
-            ⚠
-          </span>
-        ) : null}
-        {hintText}
-      </p>
+      {hintText ? (
+        <p className="hint" id="url-hint" data-tone={hintTone}>
+          {props.urlError ? (
+            <span className="hint-icon" aria-hidden="true">
+              ⚠
+            </span>
+          ) : null}
+          {hintText}
+        </p>
+      ) : null}
 
       <div className="panel-footer">
         <ChipGroup

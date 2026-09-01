@@ -237,7 +237,10 @@ export function App() {
         return;
       }
       await navigator.clipboard.writeText(shareTargetUrl);
-      useExperienceStore.setState({ announcement: 'Share link copied to the clipboard.' });
+      useExperienceStore.setState({
+        announcement:
+          'Share link copied. It opens the full 3D sculpture, and carries your destination encoded — not encrypted.',
+      });
     } catch {
       useExperienceStore.setState({
         announcement: 'Sharing was cancelled. The link is in the address bar.',

@@ -60,27 +60,6 @@ export function buildModuleRamp(theme: Theme, background: string): ModuleRamp {
 }
 
 /**
- * How far idle-state module colours are pulled toward the background.
- *
- * While the sculpture is the subject, the code underneath it is a whisper — a
- * tone-on-tone pavement where the pattern (finder squares included) is only
- * hinted. The full-contrast mosaic fades in with the reveal.
- */
-export const IDLE_SUBTLETY = 0.82;
-
-/** Mix `color` toward `background` by `amount` (0 = unchanged, 1 = invisible). */
-export function toSubtle(color: string, background: string, amount = IDLE_SUBTLETY): string {
-  const a = parseHexColor(color);
-  const b = parseHexColor(background);
-  if (!a || !b) return color;
-  return toHexColor({
-    r: a.r + (b.r - a.r) * amount,
-    g: a.g + (b.g - a.g) * amount,
-    b: a.b + (b.b - a.b) * amount,
-  });
-}
-
-/**
  * Deterministic colour for a module. The same URL, theme and module always
  * produce the same colour on every device, so shared links look identical and
  * renders are reproducible.

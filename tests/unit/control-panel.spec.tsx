@@ -91,9 +91,28 @@ describe('ControlPanel', () => {
     expect(props.onBrandColorsChange).not.toHaveBeenCalled();
   });
 
-  it('says plainly that the share link is not encrypted', () => {
+  it('keeps the hint line silent until it has something to say', () => {
     setup();
-    expect(screen.getByText(/encoded, not encrypted/i)).toBeInTheDocument();
+    // No standing commentary under the field.
+    expect(screen.queryByText(/encoded, not encrypted/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/generated in your browser/i)).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Destination link')).not.toHaveAttribute('aria-describedby');
+  });
+
+  it('describes the field only while there is a message to point at', () => {
+    setup({ urlIsDense: true });
+    expect(screen.getByLabelText('Destination link')).toHaveAttribute(
+      'aria-describedby',
+      'url-hint',
+    );
+    expect(screen.getByText(/code is dense/i)).toHaveAttribute('id', 'url-hint');
+  });
+
+  it('still discloses what a share link carries, on the button itself', () => {
+    setup();
+    const title = screen.getByRole('button', { name: 'Share' }).getAttribute('title') ?? '';
+    expect(title).toMatch(/not encrypted/i);
+    expect(title).toMatch(/3D sculpture/i);
   });
 
   it('confirms a copy in the icon button label', async () => {

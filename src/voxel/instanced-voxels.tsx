@@ -23,8 +23,6 @@ export interface InstancedVoxelsProps {
   qrBackground: string;
   /** Per-module mosaic colour; must match the base plane exactly. */
   moduleColor: (row: number, column: number) => string;
-  /** True for the three corner finder squares. */
-  finder: (row: number, column: number) => boolean;
   values: RefObject<RevealValues | null>;
   /** Pointer influence in normalized device coordinates, -1..1. */
   pointer: RefObject<{ x: number; y: number }>;
@@ -48,7 +46,6 @@ export function InstancedVoxels({
   qrForeground,
   qrBackground,
   moduleColor,
-  finder,
   values,
   pointer,
   castShadow,
@@ -140,7 +137,7 @@ export function InstancedVoxels({
         const mosaic = moduleColor(row, column);
         // Finder squares rest as objects made of the sculpture's own material;
         // data tiles rest as pure background, invisible until the reveal.
-        if (finder(row, column)) {
+        if (instance.isFinder) {
           /**
            * One hue, lit slightly differently cube to cube.
            *
@@ -166,7 +163,7 @@ export function InstancedVoxels({
       }
     }
     return { idle, scan };
-  }, [layout, moduleColor, finder, qrBackground, paletteColors, foregroundColor]);
+  }, [layout, moduleColor, qrBackground, paletteColors, foregroundColor]);
 
   // Seed matrices and colours synchronously so the first painted frame is the
   // finished plinth-and-sculpture rather than a pile of cubes at the origin.

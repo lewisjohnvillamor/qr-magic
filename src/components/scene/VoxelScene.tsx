@@ -10,7 +10,7 @@ import type { RevealValues } from '../../animation/create-reveal-timeline';
 import { buildQrLayout } from '../../voxel/build-qr-layout';
 import { hashString } from '../../voxel/rng';
 import { buildModuleRamp, moduleColorAt } from '../../themes/module-colors';
-import { isFinderModule, isProtectedModule } from '../../qr/generate-matrix';
+import { isProtectedModule } from '../../qr/generate-matrix';
 import { InstancedVoxels } from '../../voxel/instanced-voxels';
 import { QrBasePlane } from './QrBackingPlane';
 import { CameraRig } from './CameraRig';
@@ -106,11 +106,6 @@ function SceneContents({
       moduleColorAt(ramp, seed, row, column, isProtectedModule(matrix, row, column));
   }, [theme, qrBackground, matrix]);
 
-  const finder = useMemo(
-    () => (row: number, column: number) => isFinderModule(matrix, row, column),
-    [matrix],
-  );
-
   return (
     <>
       <SceneAtmosphere theme={theme} />
@@ -163,7 +158,6 @@ function SceneContents({
         qrForeground={qrForeground}
         qrBackground={qrBackground}
         moduleColor={moduleColor}
-        finder={finder}
         values={values}
         pointer={pointer}
         castShadow={quality.shadows}

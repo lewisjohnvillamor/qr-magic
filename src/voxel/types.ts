@@ -38,6 +38,8 @@ export interface VoxelInstance {
   isQrModule: boolean;
   /** For tiles: the [row, column] of the module this cube is. */
   module?: [number, number];
+  /** True for the three corner finder squares, which exist at rest. */
+  isFinder?: boolean;
   /** Restrained random offset used during the scatter stage. */
   scatter: [number, number, number];
 }

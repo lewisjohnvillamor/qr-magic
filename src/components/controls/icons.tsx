@@ -80,6 +80,8 @@ export interface IconButtonProps {
   icon: IconName;
   /** The button's accessible name — icons alone never carry meaning. */
   label: string;
+  /** Hover tooltip, when it should say more than the name. Defaults to `label`. */
+  title?: string;
   onClick: () => void;
   pressed?: boolean;
   className?: string;
@@ -95,6 +97,7 @@ export interface IconButtonProps {
 export function IconButton({
   icon,
   label,
+  title,
   onClick,
   pressed,
   className = '',
@@ -106,7 +109,7 @@ export function IconButton({
       className={`icon-button ${className}`.trim()}
       onClick={onClick}
       aria-label={label}
-      title={label}
+      title={title ?? label}
       {...(pressed === undefined ? {} : { 'aria-pressed': pressed })}
       {...(testId ? { 'data-testid': testId } : {})}
     >

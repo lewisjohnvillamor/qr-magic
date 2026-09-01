@@ -94,6 +94,7 @@ export function buildQrLayout(options: LayoutOptions): VoxelLayout {
         delay: Math.min(1, ripple) * 0.5 + rng() * 0.1,
         isQrModule: true,
         module: [row, column],
+        isFinder: finder,
         scatter: [0, 0, 0],
       });
     }

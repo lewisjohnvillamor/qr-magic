@@ -6,12 +6,11 @@ By **Lewis John Villamor**
 
 ![VoxelQR — a voxel island standing on its QR base](docs/media/app-idle.jpg)
 
-VoxelQR renders a link as a voxel sculpture standing on a plinth that _is_ the
-QR code. At rest the base is a clean themed platform with three voxel finder
-squares in its corners — the data is hidden. Press the sculpture and the camera
-tilts to a perfect top-down view while the code grows out of the ground and the
-sculpture is absorbed into it. Press **Return to sculpture** and the same
-timeline runs backwards.
+VoxelQR renders a link as a voxel sculpture with three voxel finder squares
+resting around it — no platform, no visible code. Press the sculpture and the
+camera tilts to a perfect top-down view while the code grows out of the ground
+and the sculpture is absorbed into it. Press **Return to sculpture** and the
+same timeline runs backwards.
 
 Everything happens in the browser. There is no backend, no database, no account,
 and the destination link is never sent anywhere.
@@ -151,6 +150,17 @@ URL, so the same link always produces the same sculpture.
 ---
 
 ## Sharing
+
+**A share link carries the whole 3D experience, not a picture of a code.** The
+payload holds the destination plus the sculpture, theme and any brand colours,
+so whoever opens it lands on the same sculpture and presses it themselves. If
+you want a flat image instead, that is what **Save image** is for.
+
+| Action         | What the recipient gets                                                 |
+| -------------- | ----------------------------------------------------------------------- |
+| **Share**      | A link to the live 3D experience, restored exactly as you configured it |
+| **Embed**      | An `<iframe>` snippet putting that same live experience in your page    |
+| **Save image** | A PNG — the sculpture, or a scannable code, for email and print         |
 
 The current destination and appearance are encoded into the address bar as a
 versioned, Base64URL-encoded JSON payload under `?experience=`, parsed with Zod on

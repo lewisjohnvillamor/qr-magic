@@ -15,31 +15,16 @@ export interface QrBasePlaneProps {
   values: RefObject<RevealValues | null>;
 }
 
-function makeTexture(
-  draw: (context: CanvasRenderingContext2D) => void,
-): THREE.CanvasTexture | null {
-  const canvas = document.createElement('canvas');
-  const context = canvas.getContext('2d');
-  if (!context) return null;
-  draw(context);
-  const created = new THREE.CanvasTexture(canvas);
-  created.magFilter = THREE.NearestFilter;
-  created.minFilter = THREE.NearestFilter;
-  created.generateMipmaps = false;
-  created.colorSpace = THREE.SRGBColorSpace;
-  created.anisotropy = 1;
-  return created;
-}
-
 /**
- * The base the sculpture stands on — and the scan-safe layer (spec §9.3).
+ * The ground the code resolves onto — and the scan-safe layer (spec §9.3).
  *
- * Two truths share one square of ground. Underneath, always present, lies the
- * mathematically exact mosaic QR (quiet zone included). Over it floats the
- * resting cover: a plain themed ground. The three finder squares stand above
- * it as real voxel relief. The cover fades out as the reveal runs, so the
- * idle state gives nothing of the data away and the scan state is exactly the
- * canonical code with no blending in the way.
+ * It carries the mathematically exact mosaic, quiet zone included, so that at
+ * lock any sub-pixel seam between raised tiles falls on a correct pixel. At
+ * rest it is fully transparent: there is no platform under the sculpture, only
+ * the three finder monuments, and the code materialises as the reveal runs.
+ *
+ * Opacity trails the tiles slightly, so the code reads as growing out of the
+ * ground rather than being switched on underneath them.
  */
 export function QrBasePlane({
   matrix,
@@ -48,68 +33,58 @@ export function QrBasePlane({
   moduleColor,
   values,
 }: QrBasePlaneProps) {
-  const subtleRef = useRef<THREE.Mesh>(null);
+  const meshRef = useRef<THREE.Mesh>(null);
 
-  const mosaicTexture = useMemo(
-    () =>
-      makeTexture((context) =>
-        drawCanonicalQr(context, matrix, { foreground, background, moduleColor, modulePixels: 12 }),
-      ),
-    [matrix, foreground, background, moduleColor],
-  );
+  const texture = useMemo(() => {
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    if (!context) return null;
+    // 12 device pixels per module keeps the texture crisp at any sensible
+    // on-screen size while staying well inside texture limits.
+    drawCanonicalQr(context, matrix, { foreground, background, moduleColor, modulePixels: 12 });
+    const created = new THREE.CanvasTexture(canvas);
+    created.magFilter = THREE.NearestFilter;
+    created.minFilter = THREE.NearestFilter;
+    created.generateMipmaps = false;
+    created.colorSpace = THREE.SRGBColorSpace;
+    created.anisotropy = 1;
+    return created;
+  }, [matrix, foreground, background, moduleColor]);
 
-  const subtleTexture = useMemo(
-    () =>
-      makeTexture((context) =>
-        drawCanonicalQr(context, matrix, {
-          foreground,
-          background,
-          // A plain themed ground: the finder squares above it are real voxel
-          // relief now, so nothing of the code is painted into the surface
-          // until the reveal fades this cover away.
-          moduleColor: () => background,
-          modulePixels: 12,
-        }),
-      ),
-    [matrix, foreground, background],
-  );
-
-  useEffect(() => () => mosaicTexture?.dispose(), [mosaicTexture]);
-  useEffect(() => () => subtleTexture?.dispose(), [subtleTexture]);
+  useEffect(() => () => texture?.dispose(), [texture]);
 
   useFrame(() => {
-    const subtle = subtleRef.current;
+    const mesh = meshRef.current;
     const reveal = values.current;
-    if (!subtle || !reveal) return;
-    const material = subtle.material as THREE.MeshBasicMaterial;
-    material.opacity = Math.max(0, 1 - reveal.morph * 1.25);
-    // Fully removed at scan time so nothing can blend over the canonical code.
-    subtle.visible = material.opacity > 0.01;
+    if (!mesh || !reveal) return;
+    const material = mesh.material as THREE.MeshBasicMaterial;
+    const opacity = Math.min(1, Math.max(0, (reveal.morph - 0.12) / 0.72));
+    material.opacity = opacity;
+    // Opaque at the scan state: no blending between the code and whatever is
+    // behind it, so the rendered colours are exactly the canonical ones.
+    material.transparent = opacity < 1;
+    mesh.visible = opacity > 0.001;
   });
 
-  if (!mosaicTexture || !subtleTexture) return null;
+  if (!texture) return null;
 
   return (
-    <>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]} renderOrder={-2}>
-        <planeGeometry args={[matrix.total, matrix.total]} />
-        <meshBasicMaterial map={mosaicTexture} toneMapped={false} fog={false} />
-      </mesh>
-      <mesh
-        ref={subtleRef}
-        rotation={[-Math.PI / 2, 0, 0]}
-        position={[0, -0.004, 0]}
-        renderOrder={-1}
-      >
-        <planeGeometry args={[matrix.total, matrix.total]} />
-        <meshBasicMaterial
-          map={subtleTexture}
-          toneMapped={false}
-          fog={false}
-          transparent
-          depthWrite={false}
-        />
-      </mesh>
-    </>
+    <mesh
+      ref={meshRef}
+      rotation={[-Math.PI / 2, 0, 0]}
+      position={[0, -0.005, 0]}
+      visible={false}
+      renderOrder={-1}
+    >
+      <planeGeometry args={[matrix.total, matrix.total]} />
+      <meshBasicMaterial
+        map={texture}
+        toneMapped={false}
+        fog={false}
+        transparent
+        opacity={0}
+        depthWrite={false}
+      />
+    </mesh>
   );
 }

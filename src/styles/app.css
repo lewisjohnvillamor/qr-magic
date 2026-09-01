@@ -141,7 +141,7 @@ body {
 .panel-card {
   width: min(100%, 34rem);
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   gap: var(--space-2);
   padding: var(--space-3);
   border: 1px solid var(--hairline);
@@ -220,7 +220,6 @@ body {
   gap: var(--space-2);
 }
 
-.field-label,
 .option-legend {
   font-size: 0.72rem;
   font-weight: 650;
