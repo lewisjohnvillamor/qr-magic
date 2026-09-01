@@ -113,9 +113,3 @@ export function normalizeUrl(input: string): UrlValidation {
 
   return { ok: true, url, dense: url.length > DENSE_URL_LENGTH };
 }
-
-/** Convenience wrapper for callers that only need the normalized string. */
-export function normalizeUrlOrNull(input: string): string | null {
-  const result = normalizeUrl(input);
-  return result.ok ? result.url : null;
-}

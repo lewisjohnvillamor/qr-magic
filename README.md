@@ -153,15 +153,6 @@ capture size, guarded by its own test.
 
 ---
 
-## Sculptures and themes
-
-Six procedural sculptures — floating cube, crystal, gift box, miniature city,
-island, abstract portal — and six themes — Nature, Cyber, Crystal, Sunset, Snow
-and Brand (your own two colours). All layouts are seeded from the destination
-URL, so the same link always produces the same sculpture.
-
----
-
 ## Sharing
 
 **A share link carries the whole 3D experience, not a picture of a code.** The
@@ -174,6 +165,13 @@ you want a flat image instead, that is what **Save image** is for.
 | **Share**      | A link to the live 3D experience, restored exactly as you configured it |
 | **Embed**      | An `<iframe>` snippet putting that same live experience in your page    |
 | **Save image** | A PNG — the sculpture, or a scannable code, for email and print         |
+
+**A shared link opens read-only.** The recipient gets the sculpture, the reveal
+and the code, plus the same Share, Embed and Save actions — but no link field
+and no sculpture or theme pickers, because the experience is yours and they are
+receiving it, not editing it. The Share and Embed buttons add a `view=1` flag
+for exactly this; the address-bar sync never does, so your own page stays
+editable across reloads while the copy you hand out does not.
 
 The current destination and appearance are encoded into the address bar as a
 versioned, Base64URL-encoded JSON payload under `?experience=`, parsed with Zod on
@@ -201,26 +199,10 @@ interpolation and idle rotation stops, with no loss of function.
 
 ---
 
-## Using it in email
+## Quality tiers
 
-Email clients strip scripts, iframes and WebGL, so the live widget cannot run
-inside an inbox — nothing interactive can. What works everywhere is an image:
-
-1. Configure the experience and press **Save image** — in the scan-ready state
-   the export is named `voxelqr-code.png` and is itself a scannable QR (the e2e
-   suite decodes the actual downloaded file).
-2. Put that image in the email and link it to your share URL, so a click opens
-   the full 3D experience in the browser while a phone camera can scan the
-   picture directly from the screen.
-
-The sculpture-state export (`voxelqr-<sculpture>-<theme>.png`) makes a good
-hero image for the same link.
-
-## Performance
-
-One `InstancedMesh` draws every cube. No vectors, matrices or colours are
-allocated inside the frame loop. Rendering stops entirely when the tab is hidden,
-and the device pixel ratio is capped by the active quality tier:
+The device pixel ratio and the scene's budget are capped by the tier detected
+for the device:
 
 | Tier     | Cubes | Shadows | Particles |      Max DPR |
 | -------- | ----: | ------- | --------: | -----------: |
@@ -311,13 +293,12 @@ captures them from the running app through the same Playwright harness the
 tests use, so a README picture cannot drift from what the product does. It is
 opt-in, so an ordinary test run never writes into the working tree.
 
-The images in this README are generated, not hand-picked: `tests/e2e` captures
-them from the running app, so they cannot drift from what the product actually
-looks like.
-
-This product contains no third-party branding, assets, audio or source code. The
-sound — two cues plus a looping ambient bed per theme — is synthesised at
-runtime with the Web Audio API, and starts muted until the user turns it on.
+This product contains no ICQR branding, assets, audio or source code. The two
+interaction cues and the per-theme ambient bed are synthesised at runtime with
+the Web Audio API. Under them sits one licensed cinematic track, credited in
+[ATTRIBUTION.md](ATTRIBUTION.md) and on the sound control itself. Everything
+starts muted, and the track is fetched only once someone turns the sound on, so
+a visitor who never unmutes downloads none of it.
 
 ---
 

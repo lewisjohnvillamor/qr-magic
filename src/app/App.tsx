@@ -2,6 +2,7 @@ import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } fro
 import { useExperienceStore } from './experience-store';
 import { useReveal } from './use-reveal';
 import { ControlPanel } from '../components/controls/ControlPanel';
+import { ViewerPanel } from '../components/controls/ViewerPanel';
 import { FallbackQr } from '../components/fallback/FallbackQr';
 import { LiveRegion } from '../components/LiveRegion';
 import { IconButton } from '../components/controls/icons';
@@ -10,8 +11,8 @@ import { QUALITY_PROFILES, detectWebglSupport } from '../lib/quality';
 import { prefersReducedMotion, subscribeToReducedMotion } from '../animation/motion-preferences';
 import { useElementHeight } from '../lib/use-element-height';
 import { playCue, disposeAudio } from '../lib/audio';
-import { playAmbient, stopAmbient, disposeAmbient } from '../lib/ambient';
-import { SHARE_PARAM } from '../sharing/share-codec';
+import { MUSIC_CREDIT, playAmbient, stopAmbient, disposeAmbient } from '../lib/ambient';
+import { SHARE_PARAM, isReadOnlySearch } from '../sharing/share-codec';
 
 const VoxelScene = lazy(() =>
   import('../components/scene/VoxelScene').then((module) => ({ default: module.VoxelScene })),
@@ -24,6 +25,18 @@ function readEmbedMode(): boolean {
 }
 
 /**
+ * True when this page was opened from a link someone shared.
+ *
+ * Read once at load, before the address-bar sync starts writing payloads of
+ * its own, so a recipient stays in view mode and an author who reloads their
+ * own page does not fall into it.
+ */
+function readViewerMode(): boolean {
+  if (typeof window === 'undefined') return false;
+  return isReadOnlySearch(window.location.search);
+}
+
+/**
  * Height the scan-ready bar occupies, in CSS pixels. The scan camera frames
  * against this constant so the locked code never shifts when the editing panel
  * collapses behind it.
@@ -33,6 +46,7 @@ const SCAN_INSET = 96;
 export function App() {
   const state = useExperienceStore();
   const [embedMode] = useState(readEmbedMode);
+  const [viewerMode] = useState(readViewerMode);
   const theme = getTheme(state.theme);
   const qrColors = useMemo(
     () =>
@@ -150,21 +164,32 @@ export function App() {
     useExperienceStore.setState({ phase: 'sculpture' });
   }, [layoutKey, controller]);
 
+  /** The link handed to other people: read-only, so they get no controls. */
   const shareTargetUrl = useMemo(
-    () => state.shareUrl(window.location.href),
+    () => state.shareUrl(window.location.href, { readOnly: true }),
     // Recomputed whenever any part of the shared payload changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [state.url, state.sculpture, state.theme, state.brandForeground, state.brandBackground],
   );
 
+  /** The author's own address: the same payload, but still editable. */
+  const authoringUrl = useMemo(
+    () => state.shareUrl(window.location.href),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [state.url, state.sculpture, state.theme, state.brandForeground, state.brandBackground],
+  );
+
   // Keep the address bar in sync so a reload or a manual copy restores the same
-  // experience, without ever adding a history entry per keystroke.
+  // experience, without ever adding a history entry per keystroke. A viewer's
+  // address is left exactly as it arrived — rewriting it would strip the
+  // read-only flag and hand them the editor on refresh.
   useEffect(() => {
+    if (viewerMode) return;
     const url = new URL(window.location.href);
-    const next = new URL(shareTargetUrl);
+    const next = new URL(authoringUrl);
     if (url.searchParams.get(SHARE_PARAM) === next.searchParams.get(SHARE_PARAM)) return;
     window.history.replaceState(null, '', next.toString());
-  }, [shareTargetUrl]);
+  }, [authoringUrl, viewerMode]);
 
   /**
    * Export the current view as a PNG — the email story.
@@ -259,6 +284,69 @@ export function App() {
     </button>
   ) : null;
 
+  if (viewerMode) {
+    return (
+      <div className="app app--viewer">
+        {/* No masthead actions beyond sound: a recipient is here to look at
+            someone else's work, not to configure it. */}
+        <header className="masthead" data-dimmed={scanReady ? 'true' : 'false'}>
+          <h1 className="wordmark">
+            VoxelQR<span> — links, sculpted</span>
+          </h1>
+          <span className="spacer" />
+          <IconButton
+            icon={state.muted ? 'sound-off' : 'sound-on'}
+            label={state.muted ? 'Sound off' : 'Sound on'}
+            title={MUSIC_CREDIT}
+            onClick={state.toggleMuted}
+            pressed={!state.muted}
+            className="masthead-action"
+          />
+        </header>
+
+        {webglSupported ? (
+          <Suspense fallback={null}>
+            <VoxelScene
+              matrix={state.matrix}
+              sculpture={state.sculpture}
+              theme={theme}
+              quality={quality}
+              qrForeground={qrColors.foreground}
+              qrBackground={qrColors.background}
+              values={controller.values}
+              bottomInset={panelHeight}
+              scanInset={SCAN_INSET}
+              active={documentVisible}
+            />
+          </Suspense>
+        ) : (
+          <FallbackQr
+            matrix={state.matrix}
+            foreground={qrColors.foreground}
+            background={qrColors.background}
+            reason="This device cannot run the 3D scene, so here is the code on its own."
+          />
+        )}
+
+        {scanReady ? null : revealControl}
+
+        <ViewerPanel
+          destination={state.url}
+          phase={state.phase}
+          onReturn={handleReturn}
+          onShare={() => void handleShare()}
+          onEmbed={() => void handleEmbed()}
+          onSavePng={handleSavePng}
+        />
+
+        <LiveRegion message={state.announcement} />
+        <div className="visually-hidden" data-testid="phase">
+          {state.phase}
+        </div>
+      </div>
+    );
+  }
+
   if (embedMode) {
     return (
       <div className="app app--embed">
@@ -301,6 +389,7 @@ export function App() {
           <IconButton
             icon={state.muted ? 'sound-off' : 'sound-on'}
             label={state.muted ? 'Sound off' : 'Sound on'}
+            title={MUSIC_CREDIT}
             onClick={state.toggleMuted}
             pressed={!state.muted}
           />
@@ -327,6 +416,7 @@ export function App() {
         <IconButton
           icon={state.muted ? 'sound-off' : 'sound-on'}
           label={state.muted ? 'Sound off' : 'Sound on'}
+          title={MUSIC_CREDIT}
           onClick={state.toggleMuted}
           pressed={!state.muted}
           className="masthead-action"

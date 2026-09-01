@@ -126,6 +126,56 @@ interface Scene {
   stop: () => void;
 }
 
+/**
+ * The cinematic bed.
+ *
+ * "Our Story Begins" by Kevin MacLeod, licensed CC BY 4.0 — see
+ * ATTRIBUTION.md. Transcoded to 64 kbps mono and crossfaded end-to-start so it
+ * loops without a seam: at this volume, under a synth pad, mono is
+ * indistinguishable from the 3.3 MB stereo master and costs a fifth as much.
+ * It is still fetched only when someone turns the sound on, so a visitor who
+ * never unmutes pays nothing for it.
+ */
+/**
+ * The credit CC BY 4.0 requires, in the words the licensor asks for.
+ *
+ * It rides on the sound control rather than sitting in a file nobody opens,
+ * so it travels with the widget into whatever page embeds it.
+ */
+export const MUSIC_CREDIT =
+  '\u201cOur Story Begins\u201d by Kevin MacLeod (incompetech.com), licensed CC BY 4.0 \u2014 shortened and remixed to loop.';
+
+const MUSIC_URL = `${import.meta.env.BASE_URL}audio/our-story-begins.mp3`;
+const MUSIC_GAIN = 0.16;
+
+/**
+ * Seconds trimmed from each end of the loop.
+ *
+ * MP3 decoders pad the start and end of a stream with a few milliseconds of
+ * silence. Looping the raw buffer would play that padding every time round as
+ * an audible hiccup, so the loop points sit just inside it.
+ */
+const MUSIC_LOOP_INSET = 0.05;
+
+let musicBuffer: AudioBuffer | null = null;
+let musicPending: Promise<AudioBuffer | null> | null = null;
+
+async function loadMusic(audio: AudioContext): Promise<AudioBuffer | null> {
+  if (musicBuffer) return musicBuffer;
+  musicPending ??= (async () => {
+    try {
+      const response = await fetch(MUSIC_URL);
+      if (!response.ok) return null;
+      musicBuffer = await audio.decodeAudioData(await response.arrayBuffer());
+      return musicBuffer;
+    } catch {
+      // A missing or undecodable track must not take the synth bed with it.
+      return null;
+    }
+  })();
+  return musicPending;
+}
+
 let context: AudioContext | null = null;
 let current: Scene | null = null;
 let currentTheme: ThemeId | null = null;
@@ -193,7 +243,9 @@ function buildScene(audio: AudioContext, config: AmbientConfig): Scene {
     // Slight detune per voice gives the lofi drift.
     oscillator.detune.value = (index % 2 === 0 ? 1 : -1) * (3 + index * 2);
     const voice = audio.createGain();
-    voice.gain.value = config.padGain / config.chord.length;
+    // Quieter than it was: the music now carries the bed and the pad only
+    // tints it toward the theme.
+    voice.gain.value = (config.padGain * 0.55) / config.chord.length;
     oscillator.connect(voice).connect(padFilter);
     oscillator.start();
     cleanups.push(() => oscillator.stop());
@@ -266,6 +318,28 @@ function buildScene(audio: AudioContext, config: AmbientConfig): Scene {
     accentTimer = window.setTimeout(schedule, 600);
   }
 
+  // ---- the cinematic bed, under the synthesised layer ----
+  let musicSource: AudioBufferSourceNode | null = null;
+  let cancelled = false;
+  void loadMusic(audio).then((buffer) => {
+    if (!buffer || cancelled) return;
+    const source = audio.createBufferSource();
+    source.buffer = buffer;
+    source.loop = true;
+    source.loopStart = MUSIC_LOOP_INSET;
+    source.loopEnd = Math.max(MUSIC_LOOP_INSET * 2, buffer.duration - MUSIC_LOOP_INSET);
+    const musicGain = audio.createGain();
+    musicGain.gain.setValueAtTime(0.0001, audio.currentTime);
+    musicGain.gain.exponentialRampToValueAtTime(MUSIC_GAIN, audio.currentTime + 2.5);
+    source.connect(musicGain).connect(sceneGain);
+    source.start(audio.currentTime, MUSIC_LOOP_INSET);
+    musicSource = source;
+  });
+  cleanups.push(() => {
+    cancelled = true;
+    musicSource?.stop();
+  });
+
   // Fade the whole scene in.
   sceneGain.gain.exponentialRampToValueAtTime(1, now + 1.6);
 
@@ -314,4 +388,6 @@ export function disposeAmbient(): void {
   void context?.close();
   context = null;
   noiseBuffer = null;
+  musicBuffer = null;
+  musicPending = null;
 }

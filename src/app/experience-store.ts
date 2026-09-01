@@ -5,7 +5,7 @@ import { generateMatrix } from '../qr/generate-matrix';
 import type { QrMatrix } from '../qr/generate-matrix';
 import { DEFAULT_SCULPTURE, isSculptureId } from '../voxel/types';
 import type { SculptureId } from '../voxel/types';
-import { DEFAULT_THEME, getTheme, isThemeId, resolveQrColors } from '../themes/themes';
+import { DEFAULT_THEME, isThemeId } from '../themes/themes';
 import type { ThemeId } from '../themes/themes';
 import type { QualityLevel } from '../lib/quality';
 import { detectQualityLevel, readDeviceHints } from '../lib/quality';
@@ -57,7 +57,7 @@ export interface ExperienceState {
     foreground?: string;
     background?: string;
   }) => void;
-  shareUrl: (origin: string) => string;
+  shareUrl: (origin: string, options?: { readOnly?: boolean }) => string;
 }
 
 function safeMatrix(value: string): QrMatrix {
@@ -175,16 +175,20 @@ export const createExperienceStore = (search = '') => {
       });
     },
 
-    shareUrl: (origin) => {
+    shareUrl: (origin, options) => {
       const state = get();
-      return buildShareUrl(origin, {
-        url: state.url,
-        sculpture: state.sculpture,
-        theme: state.theme,
-        ...(state.theme === 'brand'
-          ? { foreground: state.brandForeground, background: state.brandBackground }
-          : {}),
-      });
+      return buildShareUrl(
+        origin,
+        {
+          url: state.url,
+          sculpture: state.sculpture,
+          theme: state.theme,
+          ...(state.theme === 'brand'
+            ? { foreground: state.brandForeground, background: state.brandBackground }
+            : {}),
+        },
+        options ?? {},
+      );
     },
   }));
 };
@@ -192,11 +196,3 @@ export const createExperienceStore = (search = '') => {
 export const useExperienceStore = createExperienceStore(
   typeof window === 'undefined' ? '' : window.location.search,
 );
-
-/** Derived selector: the guaranteed scan-safe colours for the current theme. */
-export function selectQrColors(state: ExperienceState) {
-  return resolveQrColors(getTheme(state.theme), {
-    foreground: state.brandForeground,
-    background: state.brandBackground,
-  });
-}
