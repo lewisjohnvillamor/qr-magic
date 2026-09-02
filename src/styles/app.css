@@ -576,6 +576,37 @@ body {
   }
 }
 
+/* ---------- weather readout ---------- */
+
+/* Quiet by design: it explains the scene's mood, it is not a headline. */
+.weather-badge {
+  display: inline-flex;
+  gap: 0.4em;
+  align-items: center;
+  padding: 0 var(--space-2);
+  font-size: 0.76rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  white-space: nowrap;
+  opacity: 0.72;
+}
+
+.weather-badge > [aria-hidden] {
+  font-size: 0.95rem;
+  line-height: 1;
+}
+
+/* On a narrow screen the glyph carries it; the words would crowd the row. */
+@media (max-width: 30rem) {
+  .weather-badge {
+    font-size: 0;
+    gap: 0;
+  }
+  .weather-badge > [aria-hidden] {
+    font-size: 1rem;
+  }
+}
+
 /* ---------- viewer mode (a link someone shared with you) ---------- */
 
 /* The destination is disclosed, but it is not the subject of the page: one

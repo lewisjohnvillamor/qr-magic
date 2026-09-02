@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { decodeQrFromPng } from './decode';
-import { experienceUrl, waitForStableScene } from './helpers';
+import { experienceUrl, waitForStableScene, SCAN_READY_TIMEOUT } from './helpers';
 
 const DESTINATION = 'https://example.com/shared-with-you';
 
@@ -32,7 +32,10 @@ test.describe('viewer mode', () => {
     await page.locator('.scene canvas').waitFor({ state: 'attached' });
 
     await page.getByTestId('reveal-button').click();
-    await page.getByTestId('phase').filter({ hasText: 'scan-ready' }).waitFor({ timeout: 20_000 });
+    await page
+      .getByTestId('phase')
+      .filter({ hasText: 'scan-ready' })
+      .waitFor({ timeout: SCAN_READY_TIMEOUT });
     expect(decodeQrFromPng(await waitForStableScene(page))).toBe(DESTINATION);
 
     await page.getByRole('button', { name: 'Return to sculpture' }).click();

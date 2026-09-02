@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { decodeQrFromPng } from './decode';
-import { experienceUrl, screenshotScene } from './helpers';
+import { experienceUrl, screenshotScene, SCAN_READY_TIMEOUT } from './helpers';
 
 const URL_A = 'https://example.com/widget';
 
@@ -32,7 +32,10 @@ test.describe('embed mode', () => {
 
     // The reveal works and the code decodes at widget size.
     await page.getByTestId('reveal-button').click();
-    await page.getByTestId('phase').filter({ hasText: 'scan-ready' }).waitFor({ timeout: 20_000 });
+    await page
+      .getByTestId('phase')
+      .filter({ hasText: 'scan-ready' })
+      .waitFor({ timeout: SCAN_READY_TIMEOUT });
     await page.waitForTimeout(600);
     expect(decodeQrFromPng(await screenshotScene(page))).toBe(URL_A);
 

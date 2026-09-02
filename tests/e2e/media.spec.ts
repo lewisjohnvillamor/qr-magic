@@ -1,6 +1,6 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { test } from '@playwright/test';
-import { experienceUrl, openExperience } from './helpers';
+import { experienceUrl, openExperience, SCAN_READY_TIMEOUT } from './helpers';
 
 /**
  * Regenerates the README's images from the running app.
@@ -49,11 +49,76 @@ test.describe('gallery', () => {
     await page.waitForTimeout(950);
     writeFileSync(`${OUT}/reveal-midway.jpg`, await page.screenshot(JPEG));
 
-    await page.getByTestId('phase').filter({ hasText: 'scan-ready' }).waitFor({ timeout: 20_000 });
+    await page
+      .getByTestId('phase')
+      .filter({ hasText: 'scan-ready' })
+      .waitFor({ timeout: SCAN_READY_TIMEOUT });
     await page.waitForTimeout(700);
     // Lossless: the README shows this one as a working code.
     writeFileSync(`${OUT}/app-scan-ready.png`, await page.screenshot());
   });
+});
+
+test.describe('weather', () => {
+  test.use({ viewport: { width: 1000, height: 640 }, timezoneId: 'Asia/Manila' });
+
+  // Stubbed rather than live, so the README shows the feature instead of
+  // whatever the sky happened to be doing when the images were regenerated.
+  const CONDITIONS = [
+    {
+      label: 'weather-rain',
+      theme: 'nature',
+      sculpture: 'island',
+      current: {
+        weather_code: 63,
+        precipitation: 3,
+        wind_speed_10m: 28,
+        cloud_cover: 90,
+        temperature_2m: 21,
+      },
+    },
+    {
+      label: 'weather-snow',
+      theme: 'crystal',
+      sculpture: 'portal',
+      current: {
+        weather_code: 75,
+        precipitation: 4,
+        wind_speed_10m: 10,
+        cloud_cover: 100,
+        temperature_2m: -4,
+      },
+    },
+    {
+      label: 'weather-storm',
+      theme: 'cyber',
+      sculpture: 'city',
+      current: {
+        weather_code: 95,
+        precipitation: 8,
+        wind_speed_10m: 55,
+        cloud_cover: 100,
+        temperature_2m: 19,
+        is_day: 0,
+      },
+    },
+  ];
+
+  for (const item of CONDITIONS) {
+    test(`media ${item.label}`, async ({ page }) => {
+      await page.route('https://api.open-meteo.com/**', (route) =>
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ current: { is_day: 1, ...item.current } }),
+        }),
+      );
+      await openExperience(page, { url: LINK, sculpture: item.sculpture, theme: item.theme });
+      await page.getByTestId('weather-badge').waitFor();
+      await page.waitForTimeout(1600);
+      writeFileSync(`${OUT}/${item.label}.jpg`, await page.screenshot(JPEG));
+    });
+  }
 });
 
 test.describe('widget', () => {
