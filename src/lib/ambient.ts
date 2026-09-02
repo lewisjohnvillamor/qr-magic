@@ -107,20 +107,6 @@ export const AMBIENT_THEMES: Record<ThemeId, AmbientConfig> = {
     accentDecay: 2.6,
     accentType: 'sine',
   },
-  brand: {
-    chord: [110, 220, 330],
-    padType: 'sine',
-    padGain: 0.018,
-    padFilterHz: 550,
-    noiseHz: 0,
-    noiseQ: 1,
-    noiseGain: 0,
-    scale: [440, 554.37, 659.25],
-    accentEvery: 7,
-    accentGain: 0.018,
-    accentDecay: 1.6,
-    accentType: 'sine',
-  },
 };
 
 interface Scene {

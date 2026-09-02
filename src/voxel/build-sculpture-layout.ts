@@ -304,6 +304,72 @@ const buildPortal: Builder = ({ count, seed }) => {
   return points;
 };
 
+/**
+ * The letters, drawn as a grid so the shapes are exact rather than derived.
+ *
+ * `#` is a filled cell. Two glyphs share one canvas so the V's left stroke
+ * tucks under the L's foot, which is what makes the pair read as one mark
+ * instead of two letters standing next to each other.
+ */
+const MONOGRAM = [
+  '##......##.....##',
+  '##......##.....##',
+  '##.......##...##.',
+  '##.......##...##.',
+  '##........##.##..',
+  '##........##.##..',
+  '##.........###...',
+  '#######....###...',
+  '#######....###...',
+];
+
+/**
+ * Brand — an LV monogram, extruded a couple of cubes deep so it has a solid
+ * edge when the plinth turns rather than vanishing to a line.
+ */
+const buildMonogram: Builder = ({ count, seed }) => {
+  const rng = createRng(seed);
+  const points: SculpturePoint[] = [];
+  const rows = MONOGRAM.length;
+  const columns = MONOGRAM[0]?.length ?? 0;
+  const gap = 1.02;
+
+  // Cells are cheap and the glyph is fixed, so the budget buys depth: a
+  // thicker monogram on a machine that can afford one.
+  const cells = MONOGRAM.reduce(
+    (total, row) => total + [...row].filter((c) => c === '#').length,
+    0,
+  );
+  const depth = Math.max(2, Math.min(5, Math.floor(count / Math.max(1, cells))));
+  const halfDepth = (depth - 1) / 2;
+
+  for (let row = 0; row < rows; row += 1) {
+    const line = MONOGRAM[row] ?? '';
+    for (let column = 0; column < columns; column += 1) {
+      if (line[column] !== '#') continue;
+      for (let z = 0; z < depth; z += 1) {
+        points.push(
+          point(
+            [
+              (column - (columns - 1) / 2) * gap,
+              // Row 0 is the top of the glyph, so the grid is flipped to stand
+              // the letters up rather than on their heads.
+              (rows - 1 - row - (rows - 1) / 2) * gap,
+              (z - halfDepth) * gap,
+            ],
+            // The face reads in one colour and the sides in another, so the
+            // extrusion is legible as depth instead of noise.
+            z === 0 || z === depth - 1 ? 0 : 1 + ((row + column) % 3),
+            [0, 0, 0],
+            0.94 + rng() * 0.08,
+          ),
+        );
+      }
+    }
+  }
+  return points;
+};
+
 const BUILDERS: Record<SculptureId, Builder> = {
   cube: buildCube,
   crystal: buildCrystal,
@@ -311,6 +377,7 @@ const BUILDERS: Record<SculptureId, Builder> = {
   city: buildCity,
   island: buildIsland,
   portal: buildPortal,
+  brand: buildMonogram,
 };
 
 /**

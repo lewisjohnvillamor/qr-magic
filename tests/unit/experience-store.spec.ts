@@ -84,20 +84,17 @@ describe('experience store', () => {
     expect(restored.getState().theme).toBe('snow');
   });
 
-  it('includes brand colours in the share payload only for the brand theme', () => {
-    const store = createExperienceStore('');
-    store.getState().setBrandColors('#102030', '#fefefe');
-
-    const withoutBrand = new URL(store.getState().shareUrl('https://voxelqr.example/'));
-    expect(withoutBrand.searchParams.get(SHARE_PARAM)).toBeTruthy();
-    const restoredDefault = createExperienceStore(withoutBrand.search);
-    expect(restoredDefault.getState().brandForeground).toBe('#111111');
-
-    store.getState().setTheme('brand');
-    const withBrand = new URL(store.getState().shareUrl('https://voxelqr.example/'));
-    const restoredBrand = createExperienceStore(withBrand.search);
-    expect(restoredBrand.getState().brandForeground).toBe('#102030');
-    expect(restoredBrand.getState().brandBackground).toBe('#fefefe');
+  it('opens a link that still names the retired brand theme', () => {
+    // Brand was a theme before it became a sculpture, and those links are in
+    // the wild: they must open on the default theme, not break.
+    const legacy = buildShareUrl('https://voxelqr.example/', {
+      url: 'https://example.com/old',
+      sculpture: 'portal',
+      theme: 'brand' as never,
+    });
+    const store = createExperienceStore(new URL(legacy).search);
+    expect(store.getState().url).toBe('https://example.com/old');
+    expect(store.getState().theme).toBe('nature');
   });
 
   it('announces when a shared link could not be read', () => {

@@ -26,8 +26,6 @@ export interface ExperienceState {
 
   sculpture: SculptureId;
   theme: ThemeId;
-  brandForeground: string;
-  brandBackground: string;
 
   quality: QualityLevel;
   qualityPinned: boolean;
@@ -44,19 +42,12 @@ export interface ExperienceState {
   commitUrl: (value?: string) => UrlValidation;
   setSculpture: (id: SculptureId) => void;
   setTheme: (id: ThemeId) => void;
-  setBrandColors: (foreground: string, background: string) => void;
   setQuality: (level: QualityLevel, pinned?: boolean) => void;
   setReducedMotion: (reduced: boolean) => void;
   toggleMuted: () => void;
   setPhase: (phase: Phase) => void;
   announce: (message: string) => void;
-  applyPayload: (payload: {
-    url: string;
-    sculpture?: SculptureId;
-    theme?: ThemeId;
-    foreground?: string;
-    background?: string;
-  }) => void;
+  applyPayload: (payload: { url: string; sculpture?: SculptureId; theme?: ThemeId }) => void;
   shareUrl: (origin: string, options?: { readOnly?: boolean }) => string;
 }
 
@@ -85,8 +76,6 @@ export function readInitialExperience(search: string) {
     url: payload.url,
     sculpture: isSculptureId(payload.sculpture) ? payload.sculpture : DEFAULT_SCULPTURE,
     theme: isThemeId(payload.theme) ? payload.theme : DEFAULT_THEME,
-    foreground: payload.foreground,
-    background: payload.background,
     restored: true,
     failed: false,
   };
@@ -104,8 +93,6 @@ export const createExperienceStore = (search = '') => {
 
     sculpture: initial.sculpture,
     theme: initial.theme,
-    brandForeground: initial.foreground ?? '#111111',
-    brandBackground: initial.background ?? '#f7f4ec',
 
     quality: detectQualityLevel(hints),
     qualityPinned: false,
@@ -151,8 +138,6 @@ export const createExperienceStore = (search = '') => {
 
     setSculpture: (id) => set({ sculpture: id }),
     setTheme: (id) => set({ theme: id }),
-    setBrandColors: (foreground, background) =>
-      set({ brandForeground: foreground, brandBackground: background }),
     setQuality: (level, pinned = true) => set({ quality: level, qualityPinned: pinned }),
     setReducedMotion: (reduced) => set({ reducedMotion: reduced }),
     toggleMuted: () => set((state) => ({ muted: !state.muted })),
@@ -170,8 +155,6 @@ export const createExperienceStore = (search = '') => {
         matrix: safeMatrix(result.url),
         sculpture: payload.sculpture ?? get().sculpture,
         theme: payload.theme ?? get().theme,
-        brandForeground: payload.foreground ?? get().brandForeground,
-        brandBackground: payload.background ?? get().brandBackground,
       });
     },
 
@@ -183,9 +166,6 @@ export const createExperienceStore = (search = '') => {
           url: state.url,
           sculpture: state.sculpture,
           theme: state.theme,
-          ...(state.theme === 'brand'
-            ? { foreground: state.brandForeground, background: state.brandBackground }
-            : {}),
         },
         options ?? {},
       );

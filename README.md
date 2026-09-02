@@ -10,8 +10,8 @@ VoxelQR renders a link as a voxel sculpture with three small voxel plots
 resting around it — the finder squares, grounded in scenery built from the same
 palette. No platform, no visible code.
 
-Six sculptures ship: a floating cube, a crystal, a gift box, a downtown city
-skyline, an island with a tree, and an abstract portal. Press the sculpture and the
+Seven sculptures ship: a floating cube, a crystal, a gift box, a downtown city
+skyline, an island with a tree, an abstract portal, and an LV monogram. Press the sculpture and the
 camera tilts to a perfect top-down view while the code grows out of the ground
 and the sculpture is absorbed into it. Press **Return to sculpture** and the
 same timeline runs backwards.
@@ -30,12 +30,12 @@ The scan-ready image above is a real, working code — it decodes to
 
 ## Sculptures and themes
 
-|                                                                 |                                                                      |                                                                    |
-| --------------------------------------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| ![Island, Nature theme](docs/media/sculpture-island-nature.jpg) | ![Big city, Cyber theme](docs/media/sculpture-city-cyber.jpg)        | ![Crystal, Crystal theme](docs/media/sculpture-crystal.jpg)        |
-| **Island** · Nature                                             | **Big city** · Cyber                                                 | **Crystal** · Crystal                                              |
-| ![Gift box, Sunset theme](docs/media/sculpture-gift-sunset.jpg) | ![Abstract portal, Snow theme](docs/media/sculpture-portal-snow.jpg) | ![Floating cube, Brand theme](docs/media/sculpture-cube-brand.jpg) |
-| **Gift box** · Sunset                                           | **Abstract portal** · Snow                                           | **Floating cube** · Brand                                          |
+|                                                                 |                                                                      |                                                                           |
+| --------------------------------------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| ![Island, Nature theme](docs/media/sculpture-island-nature.jpg) | ![Big city, Cyber theme](docs/media/sculpture-city-cyber.jpg)        | ![Crystal, Crystal theme](docs/media/sculpture-crystal.jpg)               |
+| **Island** · Nature                                             | **Big city** · Cyber                                                 | **Crystal** · Crystal                                                     |
+| ![Gift box, Sunset theme](docs/media/sculpture-gift-sunset.jpg) | ![Abstract portal, Snow theme](docs/media/sculpture-portal-snow.jpg) | ![The LV monogram, Sunset theme](docs/media/sculpture-brand-monogram.jpg) |
+| **Gift box** · Sunset                                           | **Abstract portal** · Snow                                           | **Brand** · Sunset                                                        |
 
 Every layout is seeded from the destination URL, so the same link always
 produces the same sculpture.
@@ -108,12 +108,11 @@ reliability is enforced in three places rather than hoped for:
    the raw instance colour, so lighting, fog and shadows cannot tint a module.
 
 On top of that, `toScanSafePair` guarantees at least a 7:1 contrast ratio with
-the darker colour as the foreground, for every theme and for any brand colours a
-user picks.
+the darker colour as the foreground, for every theme.
 
 And it is a build gate: `tests/e2e/qr-decode.spec.ts` screenshots the live WebGL
 canvas in its scan-ready state and decodes it with ZXing across six viewports and
-pixel densities, all six themes, all six sculptures, short and long URLs, and
+pixel densities, every theme, every sculpture, short and long URLs, and
 reduced-motion mode. A code that will not decode fails CI.
 
 ### Scanning headroom, measured
@@ -156,8 +155,8 @@ capture size, guarded by its own test.
 ## Sharing
 
 **A share link carries the whole 3D experience, not a picture of a code.** The
-payload holds the destination plus the sculpture, theme and any brand colours,
-so whoever opens it lands on the same sculpture and presses it themselves. If
+payload holds the destination plus the sculpture and theme, so whoever opens it
+lands on the same sculpture and presses it themselves. If
 you want a flat image instead, that is what **Save image** is for.
 
 | Action         | What the recipient gets                                                 |
@@ -341,7 +340,7 @@ opt-in, so an ordinary test run never writes into the working tree.
 
 This product contains no ICQR branding, assets, audio or source code. The two
 interaction cues and the per-theme ambient bed are synthesised at runtime with
-the Web Audio API. Under them sits one licensed track per theme, credited in
+the Web Audio API. Under them sits one licensed lofi track per theme, credited in
 [ATTRIBUTION.md](ATTRIBUTION.md) and on the sound control itself. Everything
 starts muted, and only the current theme's track is fetched, only once someone
 turns the sound on — so a visitor who never unmutes downloads none of it.

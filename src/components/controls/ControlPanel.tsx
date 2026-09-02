@@ -13,15 +13,11 @@ export interface ControlPanelProps {
   urlIsDense: boolean;
   sculpture: SculptureId;
   theme: ThemeId;
-  brandForeground: string;
-  brandBackground: string;
   phase: Phase;
-  contrastAdjusted: boolean;
   onDraftUrlChange: (value: string) => void;
   onSubmitUrl: () => void;
   onSculptureChange: (value: SculptureId) => void;
   onThemeChange: (value: ThemeId) => void;
-  onBrandColorsChange: (foreground: string, background: string) => void;
   onReturn: () => void;
   onShare: () => void;
   onEmbed: () => void;
@@ -150,36 +146,6 @@ export function ControlPanel(props: ControlPanelProps) {
           options={SCULPTURE_OPTIONS}
           onChange={props.onSculptureChange}
         />
-
-        {props.theme === 'brand' ? (
-          <div className="brand-colors">
-            <label>
-              Code colour
-              <input
-                type="color"
-                value={props.brandForeground}
-                onChange={(event) =>
-                  props.onBrandColorsChange(event.target.value, props.brandBackground)
-                }
-              />
-            </label>
-            <label>
-              Background
-              <input
-                type="color"
-                value={props.brandBackground}
-                onChange={(event) =>
-                  props.onBrandColorsChange(props.brandForeground, event.target.value)
-                }
-              />
-            </label>
-            {props.contrastAdjusted ? (
-              <span className="hint" data-tone="warn">
-                Adjusted for contrast so the code still scans.
-              </span>
-            ) : null}
-          </div>
-        ) : null}
       </div>
     </div>
   );

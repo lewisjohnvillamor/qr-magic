@@ -6,6 +6,7 @@ import { ViewerPanel } from '../components/controls/ViewerPanel';
 import { FallbackQr } from '../components/fallback/FallbackQr';
 import { LiveRegion } from '../components/LiveRegion';
 import { WeatherBadge } from '../components/WeatherBadge';
+import { Masthead } from '../components/Masthead';
 import { IconButton } from '../components/controls/icons';
 import { getTheme, resolveQrColors } from '../themes/themes';
 import { QUALITY_PROFILES, detectWebglSupport } from '../lib/quality';
@@ -51,14 +52,7 @@ export function App() {
   const [embedMode] = useState(readEmbedMode);
   const [viewerMode] = useState(readViewerMode);
   const theme = getTheme(state.theme);
-  const qrColors = useMemo(
-    () =>
-      resolveQrColors(theme, {
-        foreground: state.brandForeground,
-        background: state.brandBackground,
-      }),
-    [theme, state.brandForeground, state.brandBackground],
-  );
+  const qrColors = useMemo(() => resolveQrColors(theme), [theme]);
   const quality = QUALITY_PROFILES[state.quality];
 
   const [webglSupported] = useState(detectWebglSupport);
@@ -175,14 +169,14 @@ export function App() {
     () => state.shareUrl(window.location.href, { readOnly: true }),
     // Recomputed whenever any part of the shared payload changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [state.url, state.sculpture, state.theme, state.brandForeground, state.brandBackground],
+    [state.url, state.sculpture, state.theme],
   );
 
   /** The author's own address: the same payload, but still editable. */
   const authoringUrl = useMemo(
     () => state.shareUrl(window.location.href),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [state.url, state.sculpture, state.theme, state.brandForeground, state.brandBackground],
+    [state.url, state.sculpture, state.theme],
   );
 
   // Keep the address bar in sync so a reload or a manual copy restores the same
@@ -293,23 +287,13 @@ export function App() {
   if (viewerMode) {
     return (
       <div className="app app--viewer">
-        {/* No masthead actions beyond sound: a recipient is here to look at
-            someone else's work, not to configure it. */}
-        <header className="masthead" data-dimmed={scanReady ? 'true' : 'false'}>
-          <h1 className="wordmark">
-            VoxelQR<span> — links, sculpted</span>
-          </h1>
-          <span className="spacer" />
-          <WeatherBadge weather={weather} />
-          <IconButton
-            icon={state.muted ? 'sound-off' : 'sound-on'}
-            label={state.muted ? 'Sound off' : 'Sound on'}
-            title={musicCredit(state.theme)}
-            onClick={state.toggleMuted}
-            pressed={!state.muted}
-            className="masthead-action"
-          />
-        </header>
+        <Masthead
+          dimmed={scanReady}
+          muted={state.muted}
+          onToggleMuted={state.toggleMuted}
+          musicCredit={musicCredit(state.theme)}
+          weather={weather}
+        />
 
         {webglSupported ? (
           <Suspense fallback={null}>
@@ -417,22 +401,13 @@ export function App() {
     <div className="app">
       {/* The interface gets out of the way once the code is scannable: anything
           overlapping the code is one more thing for a camera to trip over. */}
-      <header className="masthead" data-dimmed={state.phase === 'scan-ready' ? 'true' : 'false'}>
-        <h1 className="wordmark">
-          VoxelQR<span> — links, sculpted</span>
-        </h1>
-        <p className="tagline">A link that arrives as a 3D sculpture.</p>
-        <span className="spacer" />
-        <WeatherBadge weather={weather} />
-        <IconButton
-          icon={state.muted ? 'sound-off' : 'sound-on'}
-          label={state.muted ? 'Sound off' : 'Sound on'}
-          title={musicCredit(state.theme)}
-          onClick={state.toggleMuted}
-          pressed={!state.muted}
-          className="masthead-action"
-        />
-      </header>
+      <Masthead
+        dimmed={state.phase === 'scan-ready'}
+        muted={state.muted}
+        onToggleMuted={state.toggleMuted}
+        musicCredit={musicCredit(state.theme)}
+        weather={weather}
+      />
 
       {webglSupported ? (
         <Suspense fallback={null}>
@@ -467,15 +442,11 @@ export function App() {
         urlIsDense={state.urlIsDense}
         sculpture={state.sculpture}
         theme={state.theme}
-        brandForeground={state.brandForeground}
-        brandBackground={state.brandBackground}
         phase={state.phase}
-        contrastAdjusted={qrColors.adjusted}
         onDraftUrlChange={state.setDraftUrl}
         onSubmitUrl={() => state.commitUrl()}
         onSculptureChange={state.setSculpture}
         onThemeChange={state.setTheme}
-        onBrandColorsChange={state.setBrandColors}
         onReturn={handleReturn}
         onShare={() => void handleShare()}
         onEmbed={() => void handleEmbed()}

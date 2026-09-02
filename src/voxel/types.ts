@@ -1,4 +1,12 @@
-export const SCULPTURE_IDS = ['cube', 'crystal', 'gift', 'city', 'island', 'portal'] as const;
+export const SCULPTURE_IDS = [
+  'cube',
+  'crystal',
+  'gift',
+  'city',
+  'island',
+  'portal',
+  'brand',
+] as const;
 
 export type SculptureId = (typeof SCULPTURE_IDS)[number];
 
@@ -15,6 +23,7 @@ export const SCULPTURES: readonly SculptureMeta[] = [
   { id: 'city', label: 'Big city', hint: 'A downtown skyline of towers and avenues' },
   { id: 'island', label: 'Island', hint: 'A floating island with a small tree' },
   { id: 'portal', label: 'Abstract portal', hint: 'A ring of cubes around an open centre' },
+  { id: 'brand', label: 'Brand', hint: 'An LV monogram, extruded in voxels' },
 ];
 
 export const DEFAULT_SCULPTURE: SculptureId = 'crystal';

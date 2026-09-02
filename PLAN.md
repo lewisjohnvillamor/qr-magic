@@ -1,7 +1,7 @@
 # VoxelQR — Production Plan
 
 **Source spec:** _VoxelQR Product and Implementation Specification v1.0_
-**Plan version:** 1.3 · **Status:** shipped, iterating
+**Plan version:** 1.4 · **Status:** shipped, iterating
 
 > **v1.1 revisions (post-review):** the transformation was rebuilt around the
 > ground-base mechanic — the code is the plinth the sculpture stands on, and
@@ -27,6 +27,15 @@
 > that single host and an e2e test asserts the destination URL is never
 > transmitted. The falling layer fades out before the code locks, and the
 > decode matrix now covers storm, heavy snow and night fog.
+> **v1.4 revisions:** the app sizes itself to the _small_ viewport, so nothing
+> hides under a phone's address bar — the theme and sculpture rows were
+> unreachable on mobile. Precipitation is now shaped from the screen's aspect
+> rather than from the sculpture, so a portrait phone gets rain top to bottom
+> at the same particle cost. The soundtrack is five lofi pieces. **Brand moved
+> from a theme to a sculpture** — an LV monogram — taking the custom-colour
+> pickers and the payload's colour fields with it; links that still name the
+> old theme fall back to the default. The masthead carries a contact
+> invitation, and the weather names the city it is reporting for.
 > **Shape:** client-only static site. No backend, no database, no accounts.
 
 ---
@@ -156,7 +165,8 @@ static host.
 
 **Unit (Vitest):** URL normalization and rejection · matrix generation determinism ·
 voxel-to-module mapping · seeded layout determinism · share encode/decode, version
-skew, tampering, oversize · theme contrast · quality-tier selection.
+skew, tampering, oversize, retired themes · theme contrast · quality-tier
+selection · weather parsing and grading.
 
 **Component (Testing Library):** control panel flow, keyboard operation, live-region
 announcements, fallback rendering.

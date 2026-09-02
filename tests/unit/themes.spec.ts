@@ -6,7 +6,13 @@ import {
   relativeLuminance,
   toScanSafePair,
 } from '../../src/themes/contrast';
-import { THEME_IDS, THEMES, getTheme, resolveQrColors } from '../../src/themes/themes';
+import {
+  DEFAULT_THEME,
+  THEME_IDS,
+  THEMES,
+  getTheme,
+  resolveQrColors,
+} from '../../src/themes/themes';
 
 describe('contrast', () => {
   it('parses 3- and 6-digit hex colours', () => {
@@ -61,11 +67,9 @@ describe('themes', () => {
     }
   });
 
-  it('honours brand colours but still guarantees contrast', () => {
-    const pair = resolveQrColors(getTheme('brand'), {
-      foreground: '#7a7a7a',
-      background: '#8a8a8a',
-    });
-    expect(pair.ratio).toBeGreaterThanOrEqual(MIN_QR_CONTRAST);
+  it('falls back to the default for a theme that no longer exists', () => {
+    // "brand" was a theme until it became a sculpture. Links written back then
+    // must still open rather than landing on an undefined palette.
+    expect(getTheme('brand' as never)).toBe(getTheme(DEFAULT_THEME));
   });
 });
