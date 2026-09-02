@@ -28,7 +28,6 @@ export interface ExperienceState {
   theme: ThemeId;
 
   quality: QualityLevel;
-  qualityPinned: boolean;
   reducedMotion: boolean;
   muted: boolean;
 
@@ -42,12 +41,8 @@ export interface ExperienceState {
   commitUrl: (value?: string) => UrlValidation;
   setSculpture: (id: SculptureId) => void;
   setTheme: (id: ThemeId) => void;
-  setQuality: (level: QualityLevel, pinned?: boolean) => void;
   setReducedMotion: (reduced: boolean) => void;
   toggleMuted: () => void;
-  setPhase: (phase: Phase) => void;
-  announce: (message: string) => void;
-  applyPayload: (payload: { url: string; sculpture?: SculptureId; theme?: ThemeId }) => void;
   shareUrl: (origin: string, options?: { readOnly?: boolean }) => string;
 }
 
@@ -67,7 +62,6 @@ export function readInitialExperience(search: string) {
       url: DEFAULT_URL,
       sculpture: DEFAULT_SCULPTURE,
       theme: DEFAULT_THEME,
-      restored: false,
       failed: decoded.reason !== 'missing',
     };
   }
@@ -76,7 +70,6 @@ export function readInitialExperience(search: string) {
     url: payload.url,
     sculpture: isSculptureId(payload.sculpture) ? payload.sculpture : DEFAULT_SCULPTURE,
     theme: isThemeId(payload.theme) ? payload.theme : DEFAULT_THEME,
-    restored: true,
     failed: false,
   };
 }
@@ -95,7 +88,6 @@ export const createExperienceStore = (search = '') => {
     theme: initial.theme,
 
     quality: detectQualityLevel(hints),
-    qualityPinned: false,
     reducedMotion: false,
     muted: true,
 
@@ -138,25 +130,8 @@ export const createExperienceStore = (search = '') => {
 
     setSculpture: (id) => set({ sculpture: id }),
     setTheme: (id) => set({ theme: id }),
-    setQuality: (level, pinned = true) => set({ quality: level, qualityPinned: pinned }),
     setReducedMotion: (reduced) => set({ reducedMotion: reduced }),
     toggleMuted: () => set((state) => ({ muted: !state.muted })),
-    setPhase: (phase) => set({ phase }),
-    announce: (message) => set({ announcement: message }),
-
-    applyPayload: (payload) => {
-      const result = normalizeUrl(payload.url);
-      if (!result.ok) return;
-      set({
-        url: result.url,
-        draftUrl: result.url,
-        urlError: null,
-        urlIsDense: result.dense,
-        matrix: safeMatrix(result.url),
-        sculpture: payload.sculpture ?? get().sculpture,
-        theme: payload.theme ?? get().theme,
-      });
-    },
 
     shareUrl: (origin, options) => {
       const state = get();

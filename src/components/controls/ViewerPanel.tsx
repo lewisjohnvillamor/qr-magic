@@ -1,3 +1,4 @@
+import { ScanCue } from './ScanCue';
 import { ShareActions } from './ShareActions';
 import type { Phase } from '../../app/experience-store';
 
@@ -25,10 +26,7 @@ export function ViewerPanel(props: ViewerPanelProps) {
     <div className="panel panel--compact" data-testid="viewer-panel">
       <div className="panel-card">
         {scanReady ? (
-          <p className="scan-cue">
-            <strong>Scan now</strong>
-            <span>Point a camera at the code, or press it to go back.</span>
-          </p>
+          <ScanCue />
         ) : (
           <p className="scan-cue">
             <strong>Shared with you</strong>

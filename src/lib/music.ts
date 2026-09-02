@@ -10,11 +10,14 @@
  * scene rather than in front of one. A bed you notice only when it stops is
  * the point — the sculpture is the thing being looked at.
  *
- * All five are Kevin MacLeod pieces licensed CC BY 4.0 (see ATTRIBUTION.md),
- * cut to a seamless ~77-second loop and encoded mono by `tools/build-audio.py`.
- * Each is ~600 KB and only the current theme's track is ever fetched, and only
- * once someone turns the sound on — so a visitor who never unmutes downloads
- * none of it, and one who does pays for exactly one.
+ * All five are Kevin MacLeod pieces licensed CC BY 4.0, cut to a seamless
+ * ~77-second loop and encoded mono by `tools/build-audio.py`. Each is ~600 KB,
+ * and only the current theme's track is ever fetched, and only once someone
+ * turns the sound on — so a visitor who never unmutes downloads none of it, and
+ * one who does pays for exactly one.
+ *
+ * ATTRIBUTION.md is the canonical licence record, down to each recording's
+ * ISRC. None of that is repeated here, where it would only drift.
  */
 
 import type { ThemeId } from '../themes/themes';
@@ -22,17 +25,16 @@ import type { ThemeId } from '../themes/themes';
 export interface MusicTrack {
   /** File under `public/audio/`, without extension. */
   id: string;
+  /** Named in the credit the licence requires. */
   title: string;
-  /** ISRC, so the recording is identifiable beyond its title. */
-  isrc: string;
 }
 
 export const MUSIC_TRACKS: Record<ThemeId, MusicTrack> = {
-  nature: { id: 'nature', title: 'Groove Grove', isrc: 'USUAN1200054' },
-  cyber: { id: 'cyber', title: 'Soporific', isrc: 'USUAN1100582' },
-  crystal: { id: 'crystal', title: 'Comfortable Mystery', isrc: 'USUAN1100287' },
-  sunset: { id: 'sunset', title: 'Late Night Radio', isrc: 'USUAN2100003' },
-  snow: { id: 'snow', title: 'Study And Relax', isrc: 'USUAN1900030' },
+  nature: { id: 'nature', title: 'Groove Grove' },
+  cyber: { id: 'cyber', title: 'Soporific' },
+  crystal: { id: 'crystal', title: 'Comfortable Mystery' },
+  sunset: { id: 'sunset', title: 'Late Night Radio' },
+  snow: { id: 'snow', title: 'Study And Relax' },
 };
 
 export const MUSIC_COMPOSER = 'Kevin MacLeod (incompetech.com)';
