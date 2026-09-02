@@ -5,13 +5,16 @@ import { ControlPanel } from '../components/controls/ControlPanel';
 import { ViewerPanel } from '../components/controls/ViewerPanel';
 import { FallbackQr } from '../components/fallback/FallbackQr';
 import { LiveRegion } from '../components/LiveRegion';
+import { WeatherBadge } from '../components/WeatherBadge';
 import { IconButton } from '../components/controls/icons';
 import { getTheme, resolveQrColors } from '../themes/themes';
 import { QUALITY_PROFILES, detectWebglSupport } from '../lib/quality';
 import { prefersReducedMotion, subscribeToReducedMotion } from '../animation/motion-preferences';
 import { useElementHeight } from '../lib/use-element-height';
 import { playCue, disposeAudio } from '../lib/audio';
-import { MUSIC_CREDIT, playAmbient, stopAmbient, disposeAmbient } from '../lib/ambient';
+import { playAmbient, stopAmbient, disposeAmbient } from '../lib/ambient';
+import { musicCredit } from '../lib/music';
+import { useWeather } from '../lib/use-weather';
 import { SHARE_PARAM, isReadOnlySearch } from '../sharing/share-codec';
 
 const VoxelScene = lazy(() =>
@@ -59,6 +62,9 @@ export function App() {
   const quality = QUALITY_PROFILES[state.quality];
 
   const [webglSupported] = useState(detectWebglSupport);
+  // Live conditions where this is being viewed. Never load-bearing: the scene
+  // renders from the first frame and only ever gains weather.
+  const weather = useWeather(webglSupported);
   const [documentVisible, setDocumentVisible] = useState(
     typeof document === 'undefined' ? true : !document.hidden,
   );
@@ -294,10 +300,11 @@ export function App() {
             VoxelQR<span> — links, sculpted</span>
           </h1>
           <span className="spacer" />
+          <WeatherBadge weather={weather} />
           <IconButton
             icon={state.muted ? 'sound-off' : 'sound-on'}
             label={state.muted ? 'Sound off' : 'Sound on'}
-            title={MUSIC_CREDIT}
+            title={musicCredit(state.theme)}
             onClick={state.toggleMuted}
             pressed={!state.muted}
             className="masthead-action"
@@ -317,6 +324,7 @@ export function App() {
               bottomInset={panelHeight}
               scanInset={SCAN_INSET}
               active={documentVisible}
+              weather={weather}
             />
           </Suspense>
         ) : (
@@ -363,6 +371,7 @@ export function App() {
               bottomInset={0}
               scanInset={0}
               active={documentVisible}
+              weather={weather}
             />
           </Suspense>
         ) : (
@@ -386,10 +395,11 @@ export function App() {
             VoxelQR ↗
           </a>
           <span className="spacer" />
+          <WeatherBadge weather={weather} />
           <IconButton
             icon={state.muted ? 'sound-off' : 'sound-on'}
             label={state.muted ? 'Sound off' : 'Sound on'}
-            title={MUSIC_CREDIT}
+            title={musicCredit(state.theme)}
             onClick={state.toggleMuted}
             pressed={!state.muted}
           />
@@ -413,10 +423,11 @@ export function App() {
         </h1>
         <p className="tagline">A link that arrives as a 3D sculpture.</p>
         <span className="spacer" />
+        <WeatherBadge weather={weather} />
         <IconButton
           icon={state.muted ? 'sound-off' : 'sound-on'}
           label={state.muted ? 'Sound off' : 'Sound on'}
-          title={MUSIC_CREDIT}
+          title={musicCredit(state.theme)}
           onClick={state.toggleMuted}
           pressed={!state.muted}
           className="masthead-action"
@@ -436,6 +447,7 @@ export function App() {
             bottomInset={panelHeight}
             scanInset={SCAN_INSET}
             active={documentVisible}
+            weather={weather}
           />
         </Suspense>
       ) : (

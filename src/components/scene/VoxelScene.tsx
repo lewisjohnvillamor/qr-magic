@@ -15,6 +15,10 @@ import { InstancedVoxels } from '../../voxel/instanced-voxels';
 import { QrBasePlane } from './QrBackingPlane';
 import { CameraRig } from './CameraRig';
 import { Particles } from './Particles';
+import { Precipitation } from './Precipitation';
+import type { Weather } from '../../lib/weather';
+import { gradeFor } from '../../lib/weather-grading';
+import type { WeatherGrade } from '../../lib/weather-grading';
 
 export interface VoxelSceneProps {
   matrix: QrMatrix;
@@ -30,7 +34,12 @@ export interface VoxelSceneProps {
   scanInset: number;
   /** Pauses rendering entirely when the document is hidden. */
   active: boolean;
+  /** Live conditions where the viewer is, or null when unavailable. */
+  weather: Weather | null;
 }
+
+/** The grey every condition washes toward: a flat, colourless overcast. */
+const OVERCAST = new THREE.Color('#9aa6b4');
 
 /**
  * Atmosphere, tied to the viewing distance.
@@ -40,7 +49,7 @@ export interface VoxelSceneProps {
  * range that flatters the sculpture would bury the base in haze precisely
  * during the reveal — the one moment the scene has to read.
  */
-function SceneAtmosphere({ theme }: { theme: Theme }) {
+function SceneAtmosphere({ theme, grade }: { theme: Theme; grade: WeatherGrade }) {
   const { scene, camera } = useThree();
 
   useEffect(() => {
@@ -51,12 +60,20 @@ function SceneAtmosphere({ theme }: { theme: Theme }) {
     };
   }, [scene, theme]);
 
+  // Weather tints the haze toward an overcast grey rather than replacing the
+  // theme's fog colour, so a rainy Nature still reads as Nature.
+  useEffect(() => {
+    const fog = scene.fog;
+    if (!(fog instanceof THREE.Fog)) return;
+    fog.color.set(theme.fog.color).lerp(OVERCAST, grade.wash);
+  }, [scene, theme, grade.wash]);
+
   useFrame(() => {
     const fog = scene.fog;
     if (!(fog instanceof THREE.Fog)) return;
     const distance = camera.position.length();
-    fog.near = distance * theme.fog.near;
-    fog.far = distance * theme.fog.far;
+    fog.near = distance * theme.fog.near * grade.fogNear;
+    fog.far = distance * theme.fog.far * grade.fogFar;
   });
 
   return null;
@@ -72,8 +89,10 @@ function SceneContents({
   bottomInset,
   scanInset,
   values,
+  weather,
   pointer,
 }: VoxelSceneProps & { pointer: RefObject<{ x: number; y: number }> }) {
+  const grade = useMemo(() => gradeFor(weather), [weather]);
   const layout = useMemo(
     () =>
       buildQrLayout({
@@ -108,7 +127,7 @@ function SceneContents({
 
   return (
     <>
-      <SceneAtmosphere theme={theme} />
+      <SceneAtmosphere theme={theme} grade={grade} />
       <CameraRig
         qrWorldSize={layout.qrWorldSize}
         sculptureTop={sculptureTop}
@@ -118,12 +137,12 @@ function SceneContents({
         pointer={pointer}
       />
 
-      <ambientLight color={theme.lights.ambient} intensity={0.62} />
+      <ambientLight color={theme.lights.ambient} intensity={0.62 * grade.light} />
       {/* Lights are placed relative to the scene: a fixed position that
           flatters a small base sits inside a large one. */}
       <directionalLight
         color={theme.lights.key}
-        intensity={1.85}
+        intensity={1.85 * grade.light}
         position={[lightRadius * 0.6, lightRadius * 1.4, lightRadius * 0.9]}
         castShadow={quality.shadows}
         shadow-mapSize-width={1024}
@@ -139,7 +158,7 @@ function SceneContents({
       />
       <directionalLight
         color={theme.lights.rim}
-        intensity={0.65}
+        intensity={0.65 * grade.light}
         position={[-lightRadius, lightRadius * 0.4, -lightRadius * 0.8]}
       />
 
@@ -161,12 +180,21 @@ function SceneContents({
         values={values}
         pointer={pointer}
         castShadow={quality.shadows}
+        sway={grade.sway}
       />
 
       <Particles
         kind={theme.particles}
         count={quality.particles}
         color={theme.lights.rim}
+        radius={Math.max(lightRadius, 8)}
+        values={values}
+      />
+
+      {/* Real weather, on top of the theme's own atmosphere. */}
+      <Precipitation
+        weather={weather}
+        count={quality.particles}
         radius={Math.max(lightRadius, 8)}
         values={values}
       />

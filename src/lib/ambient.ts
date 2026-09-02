@@ -1,9 +1,10 @@
 /**
- * Per-theme ambient soundscapes, synthesised at runtime.
+ * Per-theme soundscapes: a synthesised layer over a scored one.
  *
- * No audio files ship with the product: each theme's loop is built from
- * oscillators and filtered noise, so there is nothing to license, nothing to
- * download, and the whole soundtrack costs a few kilobytes of code.
+ * The synthesised half — pad, filtered noise, sparse accents — is built from
+ * oscillators at runtime, so it costs a few kilobytes of code, needs no
+ * network, and is what you hear if anything else fails. Under it sits one
+ * licensed track per theme (see `music.ts`), fetched lazily.
  *
  * Everything is quiet by design — a lofi bed under the scene, not a jingle.
  * Sound starts only from the user's own toggle (the autoplay rule and the
@@ -11,6 +12,7 @@
  */
 
 import type { ThemeId } from '../themes/themes';
+import { musicUrl } from './music';
 
 export interface AmbientConfig {
   /** Sustained pad chord, in Hz. */
@@ -127,25 +129,13 @@ interface Scene {
 }
 
 /**
- * The cinematic bed.
+ * The scored bed under the synthesised layer.
  *
- * "Our Story Begins" by Kevin MacLeod, licensed CC BY 4.0 — see
- * ATTRIBUTION.md. Transcoded to 64 kbps mono and crossfaded end-to-start so it
- * loops without a seam: at this volume, under a synth pad, mono is
- * indistinguishable from the 3.3 MB stereo master and costs a fifth as much.
- * It is still fetched only when someone turns the sound on, so a visitor who
- * never unmutes pays nothing for it.
+ * One piece per theme (see `music.ts`), fetched only when someone turns the
+ * sound on and cached per theme thereafter, so switching back and forth does
+ * not re-download. A failed or undecodable fetch is swallowed: the synth bed
+ * is the product's actual soundtrack and must survive a missing file.
  */
-/**
- * The credit CC BY 4.0 requires, in the words the licensor asks for.
- *
- * It rides on the sound control rather than sitting in a file nobody opens,
- * so it travels with the widget into whatever page embeds it.
- */
-export const MUSIC_CREDIT =
-  '\u201cOur Story Begins\u201d by Kevin MacLeod (incompetech.com), licensed CC BY 4.0 \u2014 shortened and remixed to loop.';
-
-const MUSIC_URL = `${import.meta.env.BASE_URL}audio/our-story-begins.mp3`;
 const MUSIC_GAIN = 0.16;
 
 /**
@@ -157,23 +147,32 @@ const MUSIC_GAIN = 0.16;
  */
 const MUSIC_LOOP_INSET = 0.05;
 
-let musicBuffer: AudioBuffer | null = null;
-let musicPending: Promise<AudioBuffer | null> | null = null;
+const musicBuffers = new Map<ThemeId, AudioBuffer>();
+const musicPending = new Map<ThemeId, Promise<AudioBuffer | null>>();
 
-async function loadMusic(audio: AudioContext): Promise<AudioBuffer | null> {
-  if (musicBuffer) return musicBuffer;
-  musicPending ??= (async () => {
-    try {
-      const response = await fetch(MUSIC_URL);
-      if (!response.ok) return null;
-      musicBuffer = await audio.decodeAudioData(await response.arrayBuffer());
-      return musicBuffer;
-    } catch {
-      // A missing or undecodable track must not take the synth bed with it.
-      return null;
-    }
-  })();
-  return musicPending;
+async function loadMusic(audio: AudioContext, theme: ThemeId): Promise<AudioBuffer | null> {
+  const cached = musicBuffers.get(theme);
+  if (cached) return cached;
+
+  let pending = musicPending.get(theme);
+  if (!pending) {
+    pending = (async () => {
+      try {
+        const response = await fetch(musicUrl(theme));
+        if (!response.ok) return null;
+        const buffer = await audio.decodeAudioData(await response.arrayBuffer());
+        musicBuffers.set(theme, buffer);
+        return buffer;
+      } catch {
+        // A missing or undecodable track must not take the synth bed with it.
+        return null;
+      } finally {
+        musicPending.delete(theme);
+      }
+    })();
+    musicPending.set(theme, pending);
+  }
+  return pending;
 }
 
 let context: AudioContext | null = null;
@@ -213,7 +212,7 @@ function ensureNoiseBuffer(audio: AudioContext): AudioBuffer {
   return buffer;
 }
 
-function buildScene(audio: AudioContext, config: AmbientConfig): Scene {
+function buildScene(audio: AudioContext, theme: ThemeId, config: AmbientConfig): Scene {
   const now = audio.currentTime;
   const sceneGain = audio.createGain();
   sceneGain.gain.setValueAtTime(0.0001, now);
@@ -321,7 +320,7 @@ function buildScene(audio: AudioContext, config: AmbientConfig): Scene {
   // ---- the cinematic bed, under the synthesised layer ----
   let musicSource: AudioBufferSourceNode | null = null;
   let cancelled = false;
-  void loadMusic(audio).then((buffer) => {
+  void loadMusic(audio, theme).then((buffer) => {
     if (!buffer || cancelled) return;
     const source = audio.createBufferSource();
     source.buffer = buffer;
@@ -371,7 +370,7 @@ export function playAmbient(theme: ThemeId): void {
   if (!audio) return;
   if (currentTheme === theme && current) return;
   current?.stop();
-  current = buildScene(audio, AMBIENT_THEMES[theme]);
+  current = buildScene(audio, theme, AMBIENT_THEMES[theme]);
   currentTheme = theme;
 }
 
@@ -388,6 +387,6 @@ export function disposeAmbient(): void {
   void context?.close();
   context = null;
   noiseBuffer = null;
-  musicBuffer = null;
-  musicPending = null;
+  musicBuffers.clear();
+  musicPending.clear();
 }

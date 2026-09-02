@@ -59,10 +59,28 @@ export async function waitForStableScene(page: Page, timeoutMs = 15_000): Promis
   return previous;
 }
 
-/** Reveal the QR and wait for the locked, motionless scan-ready state. */
+/**
+ * How long to wait for the reveal timeline to reach scan-ready.
+ *
+ * The timeline has a fixed duration, but its wall-clock length depends on how
+ * fast frames arrive — and under a software rasteriser the heaviest case in
+ * the matrix (1920px at DPR 2, so 3840x2160) takes most of 20 seconds on its
+ * own, let alone sharing a runner with other workers. A tight budget here does
+ * not catch a broken reveal, it just fails the biggest viewport on a busy
+ * machine. A stalled timeline still fails, only later.
+ */
+export const SCAN_READY_TIMEOUT = 45_000;
+
+/**
+ * Reveal the QR and wait for the locked, motionless scan-ready state.
+ *
+ */
 export async function revealAndSettle(page: Page): Promise<void> {
   await page.getByTestId('reveal-button').click();
-  await page.getByTestId('phase').filter({ hasText: 'scan-ready' }).waitFor({ timeout: 20_000 });
+  await page
+    .getByTestId('phase')
+    .filter({ hasText: 'scan-ready' })
+    .waitFor({ timeout: SCAN_READY_TIMEOUT });
   await waitForStableScene(page);
 }
 

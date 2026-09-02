@@ -1,7 +1,7 @@
 # VoxelQR — Production Plan
 
 **Source spec:** _VoxelQR Product and Implementation Specification v1.0_
-**Plan version:** 1.2 · **Status:** shipped, iterating
+**Plan version:** 1.3 · **Status:** shipped, iterating
 
 > **v1.1 revisions (post-review):** the transformation was rebuilt around the
 > ground-base mechanic — the code is the plinth the sculpture stands on, and
@@ -17,6 +17,16 @@
 > the address-bar sync never does. A licensed cinematic bed (CC BY 4.0, see
 > ATTRIBUTION.md) sits under the synthesised ambience, transcoded to 64 kbps
 > mono and crossfaded to loop seamlessly, fetched only on unmute.
+> **v1.3 revisions:** each theme now has its own licensed track rather than
+> sharing one, cut to a seamless ~77 s loop by `tools/build-audio.py`. The
+> scene also shows **live weather where it is being viewed** — rain, snow,
+> fog, cloud, wind and night, graded on top of the theme rather than replacing
+> it. Location comes from the browser's time zone (no permission prompt, and
+> no weather at all for an offset-only zone), conditions from Open-Meteo. This
+> is the product's first and only third-party request; `connect-src` names
+> that single host and an e2e test asserts the destination URL is never
+> transmitted. The falling layer fades out before the code locks, and the
+> decode matrix now covers storm, heavy snow and night fog.
 > **Shape:** client-only static site. No backend, no database, no accounts.
 
 ---
@@ -131,8 +141,9 @@ every feature reachable.
 
 ## 7. Security and privacy
 
-Local-only QR generation; no analytics; no network calls after load (`connect-src
-'self'`). Only `http:` and `https:` destinations are accepted, capped at 1,200
+Local-only QR generation; no analytics; exactly one network call after load —
+the weather lookup, sent a pair of coordinates and nothing else (`connect-src
+'self' https://api.open-meteo.com`). Only `http:` and `https:` destinations are accepted, capped at 1,200
 characters. The app never navigates to a user-entered URL and never writes user input
 into raw HTML. Share links carry a versioned, zod-parsed, size-capped Base64URL
 payload; the UI states plainly that the link contains the destination and that the

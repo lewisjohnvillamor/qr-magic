@@ -27,6 +27,8 @@ export interface InstancedVoxelsProps {
   /** Pointer influence in normalized device coordinates, -1..1. */
   pointer: RefObject<{ x: number; y: number }>;
   castShadow: boolean;
+  /** Wind multiplier on the idle motion; 1 is still air. */
+  sway?: number;
 }
 
 function smoothstep(t: number): number {
@@ -49,6 +51,7 @@ export function InstancedVoxels({
   values,
   pointer,
   castShadow,
+  sway = 1,
 }: InstancedVoxelsProps) {
   const meshRef = useRef<THREE.InstancedMesh>(null);
   const groupRef = useRef<THREE.Group>(null);
@@ -229,8 +232,12 @@ export function InstancedVoxels({
     const yaw = yawRef.current * idle + nearestRightAngle * (1 - idle);
     const pointerYaw = (pointer.current?.x ?? 0) * 0.22 * idle;
     const pointerPitch = (pointer.current?.y ?? 0) * -0.06 * idle;
-    group.rotation.set(pointerPitch, yaw + pointerYaw, 0);
-    group.position.y = idle * Math.sin(time * 0.7) * 0.18;
+    // Wind is visible in the model, not just in what falls on it: the plinth
+    // leans and bobs harder the harder it is blowing. Only while idle — the
+    // scan pose has to be dead still and exactly square.
+    const lean = idle * Math.sin(time * 0.55) * 0.02 * (sway - 1);
+    group.rotation.set(pointerPitch, yaw + pointerYaw, lean);
+    group.position.y = idle * Math.sin(time * 0.7 * sway) * 0.18;
 
     if (!dirty) return;
     last.morph = morph;

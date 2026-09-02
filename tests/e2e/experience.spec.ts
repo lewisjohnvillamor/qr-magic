@@ -1,16 +1,26 @@
 import { expect, test } from '@playwright/test';
 import { decodeQrFromPng } from './decode';
-import { experienceUrl, openExperience, revealAndSettle, screenshotScene } from './helpers';
+import {
+  experienceUrl,
+  openExperience,
+  revealAndSettle,
+  screenshotScene,
+  SCAN_READY_TIMEOUT,
+} from './helpers';
 
 const URL_A = 'https://example.com/a';
 const URL_B = 'https://example.org/b';
 
 test.describe('creation flow', () => {
-  test('entering a URL regenerates the code without a network request', async ({ page }) => {
+  test('entering a URL regenerates the code without transmitting it', async ({ page }) => {
     const offOrigin: string[] = [];
     page.on('request', (request) => {
       if (!request.url().startsWith('http://127.0.0.1:4173')) offOrigin.push(request.url());
     });
+    // The weather lookup is the only outside call the product makes, and it is
+    // not what this test is about. Stubbing it keeps the assertion below about
+    // the app's own behaviour rather than about a third party being reachable.
+    await page.route('https://api.open-meteo.com/**', (route) => route.abort());
 
     await openExperience(page, { url: URL_A });
 
@@ -19,9 +29,29 @@ test.describe('creation flow', () => {
     await revealAndSettle(page);
 
     expect(decodeQrFromPng(await screenshotScene(page))).toBe(URL_B);
-    // The code is generated locally: nothing is ever sent off the app's origin,
-    // and in particular the destination URL is never transmitted.
-    expect(offOrigin).toEqual([]);
+
+    // The code is generated locally. Exactly one host outside the app's own
+    // origin may ever be contacted — the weather API — and it is sent nothing
+    // but coordinates. In particular the destination URL is never transmitted,
+    // to that host or any other.
+    const hosts = [...new Set(offOrigin.map((url) => new URL(url).host))];
+    expect(hosts.filter((host) => host !== 'api.open-meteo.com')).toEqual([]);
+    for (const url of offOrigin) {
+      expect(url).not.toContain('example.com');
+      expect(url).not.toContain('example.org');
+      expect(decodeURIComponent(url)).not.toContain(URL_B);
+    }
+  });
+
+  test('a blocked or failing weather lookup leaves the scene fully working', async ({ page }) => {
+    // Weather is decoration on top of a QR code, and the QR code is the
+    // product: a host whose CSP forbids the lookup, or an offline visitor,
+    // must still get a scannable code.
+    await page.route('https://api.open-meteo.com/**', (route) => route.abort());
+
+    await openExperience(page, { url: URL_A });
+    await revealAndSettle(page);
+    expect(decodeQrFromPng(await screenshotScene(page))).toBe(URL_A);
   });
 
   test('normalizes a bare hostname', async ({ page }) => {
@@ -70,7 +100,9 @@ test.describe('accessibility', () => {
 
     await page.getByTestId('reveal-button').focus();
     await page.keyboard.press('Enter');
-    await expect(page.getByTestId('phase')).toHaveText('scan-ready', { timeout: 20_000 });
+    await expect(page.getByTestId('phase')).toHaveText('scan-ready', {
+      timeout: SCAN_READY_TIMEOUT,
+    });
     await expect(page.getByRole('status')).toContainText('Scan ready');
 
     await page.getByRole('button', { name: 'Return to sculpture' }).focus();

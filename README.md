@@ -218,9 +218,12 @@ for the device:
 QR generation is local, only `http:` and `https:` destinations are accepted (up
 to 1,200 characters), unsafe schemes are rejected on entry _and_ again when a
 share link is decoded, and the app never navigates to a user-entered URL. No
-analytics, no third-party requests: an end-to-end test asserts that nothing ever
-leaves the app's own origin. A restrictive CSP ships with the dev server, the
-preview server, `public/_headers` and `vercel.json`.
+analytics, and exactly one third-party request: the weather lookup described
+below, which is sent a pair of coordinates and nothing else. An end-to-end test
+asserts that `api.open-meteo.com` is the only host ever contacted and that the
+destination URL is never transmitted — to it or to anyone. A restrictive CSP
+ships with the dev server, the preview server, `public/_headers` and
+`vercel.json`, and `connect-src` names that single host.
 
 ---
 
@@ -262,6 +265,49 @@ inside an inbox — nothing interactive can. What works everywhere is an image:
 The sculpture-state export (`voxelqr-<sculpture>-<theme>.png`) makes a good
 hero image for the same link.
 
+## Real weather, where you are
+
+The sculpture stands somewhere. If it is raining on you, it rains on the
+sculpture — the scene stops being a picture and becomes a window.
+
+| Condition    | What the scene does                                           |
+| ------------ | ------------------------------------------------------------- |
+| Rain / storm | Slanted streaks, leaning with the wind; haze pulled in        |
+| Snow         | Slow drifting flakes; the light scatters brighter, not darker |
+| Fog          | Haze closes right in — the one condition allowed to dominate  |
+| Cloud cover  | Dims the key light and washes the fog toward overcast grey    |
+| Wind         | The plinth leans and bobs harder the harder it blows          |
+| Night        | Cools and dims, to a floor — never a blackout                 |
+
+| Rain                                                       | Snow                                                        | Storm at night                                                  |
+| ---------------------------------------------------------- | ----------------------------------------------------------- | --------------------------------------------------------------- |
+| ![Rain falling on the island](docs/media/weather-rain.jpg) | ![Snow settling on the portal](docs/media/weather-snow.jpg) | ![A storm over the city at night](docs/media/weather-storm.jpg) |
+
+Two constraints shaped this.
+
+**No permission prompt.** Location comes from the browser's time zone, which
+resolves to a reference city via the public-domain IANA database. A widget
+embedded in someone else's blog cannot reasonably ask a reader for their
+precise position, and would mostly be refused. City-level is also the right
+resolution: weather is regional, and the scene only needs rain from snow from
+clear. A time zone that names an offset rather than a place — `UTC`,
+`Etc/GMT+5`, what servers and hardened browsers report — yields no weather at
+all, because guessing a position from an offset would put the viewer in the
+ocean and show them its weather.
+
+**Never load-bearing.** Every failure path — offline, blocked by a host's CSP,
+an unknown time zone, a slow network, a garbled response — resolves to nothing
+and the scene renders exactly as it would have. Weather is decoration on top of
+a QR code, and the QR code is the product: the falling layer fades out entirely
+before the code locks, so a raindrop is never drawn over a module, and the e2e
+suite decodes the code under a storm, under heavy snow, and in fog at night.
+
+Conditions come from [Open-Meteo](https://open-meteo.com) — no API key, no
+account, so the feature costs no secret to store and no user to register. The
+readout in the corner names what was applied and discloses the lookup.
+
+---
+
 ## Performance
 
 The scene is drawn in ≤4 draw calls (one `InstancedMesh` for every cube, the
@@ -295,10 +341,10 @@ opt-in, so an ordinary test run never writes into the working tree.
 
 This product contains no ICQR branding, assets, audio or source code. The two
 interaction cues and the per-theme ambient bed are synthesised at runtime with
-the Web Audio API. Under them sits one licensed cinematic track, credited in
+the Web Audio API. Under them sits one licensed track per theme, credited in
 [ATTRIBUTION.md](ATTRIBUTION.md) and on the sound control itself. Everything
-starts muted, and the track is fetched only once someone turns the sound on, so
-a visitor who never unmutes downloads none of it.
+starts muted, and only the current theme's track is fetched, only once someone
+turns the sound on — so a visitor who never unmutes downloads none of it.
 
 ---
 

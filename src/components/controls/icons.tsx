@@ -3,7 +3,7 @@
  *
  * Drawn inline as SVG rather than pulled from an icon font: they inherit
  * `currentColor` so every theme tints them for free, they add nothing to the
- * network cost, and there is no third-party asset in the product.
+ * network cost, and there is no icon font to license or load.
  *
  * Each is decorative — every button carries its own `aria-label`, so the icons
  * are hidden from assistive technology.

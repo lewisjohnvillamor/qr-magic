@@ -11,7 +11,7 @@ const securityHeaders: Record<string, string> = {
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob:",
     "font-src 'self'",
-    "connect-src 'self'",
+    "connect-src 'self' https://api.open-meteo.com",
     "worker-src 'self' blob:",
     // Embeddable by design: the app is stateless, cookieless and takes no
     // privileged actions, so framing carries no clickjacking risk.
