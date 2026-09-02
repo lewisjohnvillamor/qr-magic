@@ -17,7 +17,6 @@ function setup(overrides: Partial<ControlPanelProps> = {}) {
     onSubmitUrl: vi.fn(),
     onSculptureChange: vi.fn(),
     onThemeChange: vi.fn(),
-    onReturn: vi.fn(),
     onShare: vi.fn(),
     onEmbed: vi.fn(),
     onSavePng: vi.fn(),

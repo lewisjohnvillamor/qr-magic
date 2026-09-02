@@ -277,7 +277,11 @@ export function App() {
       {/* The hint is the only visible part; the button itself is the sculpture's
           own space, so the gesture is "press the thing" rather than "find the
           control". It is still a real focusable button for keyboards and
-          screen readers (spec §16). */}
+          screen readers (spec §16).
+
+          At scan-ready it goes quiet but stays pressable: the same surface now
+          takes you back, so returning is the same gesture as arriving rather
+          than a separate control to find. */}
       <span className="scene-action-hint" data-hidden={scanReady || busy ? 'true' : 'false'}>
         Press to reveal the QR
       </span>
@@ -320,12 +324,11 @@ export function App() {
           />
         )}
 
-        {scanReady ? null : revealControl}
+        {revealControl}
 
         <ViewerPanel
           destination={state.url}
           phase={state.phase}
-          onReturn={handleReturn}
           onShare={() => void handleShare()}
           onEmbed={() => void handleEmbed()}
           onSavePng={handleSavePng}
@@ -434,7 +437,7 @@ export function App() {
         />
       )}
 
-      {scanReady ? null : revealControl}
+      {revealControl}
 
       <ControlPanel
         draftUrl={state.draftUrl}
@@ -447,7 +450,6 @@ export function App() {
         onSubmitUrl={() => state.commitUrl()}
         onSculptureChange={state.setSculpture}
         onThemeChange={state.setTheme}
-        onReturn={handleReturn}
         onShare={() => void handleShare()}
         onEmbed={() => void handleEmbed()}
         onSavePng={handleSavePng}

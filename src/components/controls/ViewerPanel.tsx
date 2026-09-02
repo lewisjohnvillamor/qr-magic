@@ -5,7 +5,6 @@ export interface ViewerPanelProps {
   /** Where the code points, shown so a recipient can see it before scanning. */
   destination: string;
   phase: Phase;
-  onReturn: () => void;
   onShare: () => void;
   onEmbed: () => void;
   onSavePng: () => void;
@@ -28,7 +27,7 @@ export function ViewerPanel(props: ViewerPanelProps) {
         {scanReady ? (
           <p className="scan-cue">
             <strong>Scan now</strong>
-            <span>Point a camera at the code.</span>
+            <span>Point a camera at the code, or press it to go back.</span>
           </p>
         ) : (
           <p className="scan-cue">
@@ -42,11 +41,6 @@ export function ViewerPanel(props: ViewerPanelProps) {
         )}
         <span className="spacer" />
         <ShareActions onShare={props.onShare} onEmbed={props.onEmbed} onSavePng={props.onSavePng} />
-        {scanReady ? (
-          <button type="button" className="button button--primary" onClick={props.onReturn}>
-            Return to sculpture
-          </button>
-        ) : null}
       </div>
     </div>
   );

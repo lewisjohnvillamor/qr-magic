@@ -11,10 +11,10 @@ resting around it — the finder squares, grounded in scenery built from the sam
 palette. No platform, no visible code.
 
 Seven sculptures ship: a floating cube, a crystal, a gift box, a downtown city
-skyline, an island with a tree, an abstract portal, and an LV monogram. Press the sculpture and the
-camera tilts to a perfect top-down view while the code grows out of the ground
-and the sculpture is absorbed into it. Press **Return to sculpture** and the
-same timeline runs backwards.
+skyline, an island with a tree, an abstract portal, and an LV monogram. Press the
+sculpture and the camera tilts to a perfect top-down view while the code grows
+out of the ground and the sculpture is absorbed into it. Press the code and the
+same timeline runs backwards — one surface, one gesture, both directions.
 
 Everything happens in the browser. There is no backend, no database, no account,
 and the destination link is never sent anywhere.
