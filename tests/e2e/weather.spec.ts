@@ -33,9 +33,12 @@ test.describe('live weather', () => {
     await expect(badge).toContainText('Rain');
     // Rounded, so a reading of 17.4 does not put a decimal in the interface.
     await expect(badge).toContainText('17°C');
+    // The place is the time zone's reference city — the one actually queried.
+    await expect(badge).toContainText('Manila');
 
     // The disclosure rides on the readout, where it is actually read.
     const title = await badge.getAttribute('title');
+    expect(title).toContain('Manila');
     expect(title).toContain('Open-Meteo');
     expect(title).toContain('never requested or sent');
   });

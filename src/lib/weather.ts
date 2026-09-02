@@ -50,6 +50,8 @@ export interface Weather {
   /** 0..1 intensity of whatever is falling; 0 when nothing is. */
   precipitation: number;
   isDay: boolean;
+  /** The reference city the reading is for, e.g. "Manila". */
+  place: string;
 }
 
 /**
@@ -76,14 +78,32 @@ function clamp01(value: number): number {
   return Math.min(1, Math.max(0, value));
 }
 
-/** The viewer's approximate position, or null if the time zone is unknown. */
-export function viewerCoordinates(): { latitude: number; longitude: number } | null {
+/** The browser's own time zone, or null where it will not say. */
+function viewerTimeZone(): string | null {
   try {
-    const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    return zone ? coordinatesForTimeZone(zone) : null;
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || null;
   } catch {
     return null;
   }
+}
+
+/** The viewer's approximate position, or null if the time zone is unknown. */
+export function viewerCoordinates(): { latitude: number; longitude: number } | null {
+  const zone = viewerTimeZone();
+  return zone ? coordinatesForTimeZone(zone) : null;
+}
+
+/**
+ * A readable name for the place a reading belongs to.
+ *
+ * Taken from the time zone's own last segment, because that is literally the
+ * city whose coordinates were queried — naming anything else would claim more
+ * precision than the lookup has. `America/Argentina/Buenos_Aires` gives
+ * "Buenos Aires".
+ */
+export function placeForTimeZone(zone: string): string {
+  const segments = zone.split('/');
+  return (segments[segments.length - 1] ?? zone).replace(/_/g, ' ');
 }
 
 /**
@@ -114,7 +134,8 @@ export async function fetchWeather(signal?: AbortSignal): Promise<Weather | null
     const response = await fetch(url.toString(), { signal: timeout.signal });
     if (!response.ok) return null;
     const body: unknown = await response.json();
-    return parseWeather(body);
+    const zone = viewerTimeZone();
+    return parseWeather(body, zone ? placeForTimeZone(zone) : '');
   } catch {
     return null;
   } finally {
@@ -130,7 +151,7 @@ export async function fetchWeather(signal?: AbortSignal): Promise<Weather | null
  * or non-numeric collapses the whole thing to null rather than producing a
  * scene driven by `NaN`.
  */
-export function parseWeather(body: unknown): Weather | null {
+export function parseWeather(body: unknown, place = ''): Weather | null {
   if (typeof body !== 'object' || body === null) return null;
   const current = (body as { current?: unknown }).current;
   if (typeof current !== 'object' || current === null) return null;
@@ -161,5 +182,6 @@ export function parseWeather(body: unknown): Weather | null {
         ? Math.max(0.25, clamp01(precipitation / 4))
         : 0,
     isDay: (read('is_day') ?? 1) === 1,
+    place,
   };
 }

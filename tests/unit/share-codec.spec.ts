@@ -121,16 +121,22 @@ describe('share codec', () => {
     expect(decoded.ok && decoded.payload.url).toBe('https://example.com/');
   });
 
-  it('rejects an invalid brand colour', () => {
-    const bad = btoa(
+  it('opens a legacy link, dropping the fields the payload no longer carries', () => {
+    // Brand was a theme with a pair of custom colours before it became a
+    // sculpture. Those links exist, so they open on the default theme with the
+    // colours ignored, rather than failing to parse.
+    const legacy = btoa(
       JSON.stringify({
         v: 1,
         url: 'https://example.com/',
         sculpture: 'cube',
         theme: 'brand',
-        foreground: 'red',
+        foreground: '#102030',
       }),
     );
-    expect(decodeExperience(bad)).toEqual({ ok: false, reason: 'invalid' });
+    const decoded = decodeExperience(legacy);
+    expect(decoded.ok).toBe(true);
+    expect(decoded.ok && decoded.payload.theme).toBe('nature');
+    expect(decoded.ok && decoded.payload).not.toHaveProperty('foreground');
   });
 });

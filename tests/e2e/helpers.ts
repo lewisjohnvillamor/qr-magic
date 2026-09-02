@@ -4,8 +4,6 @@ export interface ExperienceOptions {
   url: string;
   sculpture?: string;
   theme?: string;
-  foreground?: string;
-  background?: string;
 }
 
 function toBase64Url(value: string): string {
@@ -24,8 +22,6 @@ export function experienceUrl(options: ExperienceOptions): string {
     sculpture: options.sculpture ?? 'crystal',
     theme: options.theme ?? 'nature',
   };
-  if (options.foreground) payload.foreground = options.foreground;
-  if (options.background) payload.background = options.background;
   return `/?experience=${toBase64Url(JSON.stringify(payload))}`;
 }
 

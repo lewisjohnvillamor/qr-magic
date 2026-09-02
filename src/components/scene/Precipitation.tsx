@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react';
 import type { RefObject } from 'react';
-import { useFrame } from '@react-three/fiber';
+import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { RevealValues } from '../../animation/create-reveal-timeline';
 import type { Weather } from '../../lib/weather';
@@ -47,11 +47,24 @@ export function Precipitation({ weather, count, radius, values }: PrecipitationP
   const clock = useRef(0);
   const kind = fallKind(weather);
 
-  // The volume drops fall through. Kept close around the sculpture rather than
-  // filling the whole visible world: spread thin over a large box, any
-  // affordable number of drops reads as a few specks instead of weather.
-  const span = Math.max(radius, 6) * 1.3;
-  const height = span * 1.4;
+  // The volume drops fall through is shaped like the screen, not like the
+  // sculpture.
+  //
+  // A cube sized from the sculpture covers a landscape monitor and leaves a
+  // tall phone raining in a band across the middle, with the drops that would
+  // have filled the top and bottom spent off to the sides where nobody is
+  // looking. Deriving the box from the viewport's aspect puts every drop
+  // on-screen, so a portrait phone gets a tall narrow column of rain and costs
+  // exactly what a landscape one does.
+  //
+  // Pixel dimensions rather than world-space viewport: this must not change
+  // while the reveal camera travels, or the geometry would be rebuilt every
+  // frame of the animation.
+  const { size } = useThree();
+  const aspect = size.height > 0 ? size.width / size.height : 1;
+  const base = Math.max(radius, 6) * 1.5;
+  const span = aspect >= 1 ? base * aspect : base;
+  const height = aspect >= 1 ? base : base / aspect;
 
   // Heavier weather means more of it, but the quality tier still sets the
   // ceiling — a low-end device does not get a storm's worth of geometry.
@@ -59,8 +72,11 @@ export function Precipitation({ weather, count, radius, values }: PrecipitationP
     if (!kind) return 0;
     const behaviour = FALL[kind];
     const share = behaviour.density * (0.55 + 0.45 * (weather?.precipitation ?? 0));
-    return Math.max(0, Math.round(count * share));
-  }, [kind, count, weather?.precipitation]);
+    // A very tall or very wide frame would otherwise thin out, so density is
+    // topped up a little — capped, because the budget is the whole point.
+    const stretch = Math.min(1.4, Math.max(1, aspect >= 1 ? aspect : 1 / aspect) ** 0.5);
+    return Math.max(0, Math.round(count * share * stretch));
+  }, [kind, count, weather?.precipitation, aspect]);
 
   const { geometry, seeds } = useMemo(() => {
     const buffer = new THREE.BufferGeometry();

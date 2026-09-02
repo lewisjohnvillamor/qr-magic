@@ -39,16 +39,23 @@ export function WeatherBadge({ weather }: WeatherBadgeProps) {
 
   const condition = LABEL[weather.condition];
   const temperature = `${Math.round(weather.temperature)}°C`;
+  const where = weather.place;
 
   return (
     <span
       className="weather-badge"
       data-testid="weather-badge"
-      title={`${condition}, ${temperature} — live conditions for your time zone, from Open-Meteo. Your exact location is never requested or sent.`}
+      title={`${condition}, ${temperature}${where ? ` in ${where}` : ''} — live conditions for your time zone, from Open-Meteo. Your exact location is never requested or sent.`}
     >
       <span aria-hidden="true">{GLYPH[weather.condition]}</span>
       <span className="visually-hidden">Local weather: </span>
-      {condition} {temperature}
+      <span className="weather-reading">
+        {condition} {temperature}
+      </span>
+      {/* The place is the time zone's reference city, not the viewer's
+          position — naming it is what stops the reading looking like it knows
+          exactly where they are. */}
+      {where ? <span className="weather-place">{where}</span> : null}
     </span>
   );
 }

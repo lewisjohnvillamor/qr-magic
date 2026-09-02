@@ -2,6 +2,8 @@ import { expect, test } from '@playwright/test';
 import { decodeQrFromPng } from './decode';
 import { openExperience, revealAndSettle, screenshotScene } from './helpers';
 import type { ExperienceOptions } from './helpers';
+import { THEME_IDS } from '../../src/themes/themes';
+import { SCULPTURE_IDS } from '../../src/voxel/types';
 
 const SHORT_URL = 'https://example.com/hi';
 const TYPICAL_URL = 'https://voxelqr.example/campaign/spring-2026?ref=poster&utm_source=print';
@@ -48,27 +50,18 @@ test.describe('viewport and pixel-density matrix', () => {
   }
 });
 
+// Driven from the product's own lists rather than copies of them, so adding a
+// theme or a sculpture cannot ship without a decode test covering it.
 test.describe('every theme produces a scannable code', () => {
-  for (const theme of ['nature', 'cyber', 'crystal', 'sunset', 'snow', 'brand']) {
+  for (const theme of THEME_IDS) {
     test(`theme: ${theme}`, async ({ page }) => {
       await expectDecodes(page, { url: SHORT_URL, theme });
     });
   }
-
-  test('brand colours that would be unscannable are corrected', async ({ page }) => {
-    // Two near-identical mid-greys: without the contrast guarantee this cannot
-    // decode at all.
-    await expectDecodes(page, {
-      url: SHORT_URL,
-      theme: 'brand',
-      foreground: '#7f7f7f',
-      background: '#8a8a8a',
-    });
-  });
 });
 
 test.describe('every sculpture produces a scannable code', () => {
-  for (const sculpture of ['cube', 'crystal', 'gift', 'city', 'island', 'portal']) {
+  for (const sculpture of SCULPTURE_IDS) {
     test(`sculpture: ${sculpture}`, async ({ page }) => {
       await expectDecodes(page, { url: SHORT_URL, sculpture });
     });

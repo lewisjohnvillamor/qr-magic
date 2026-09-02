@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { THEME_IDS } from '../../src/themes/themes';
 import { ControlPanel } from '../../src/components/controls/ControlPanel';
 import type { ControlPanelProps } from '../../src/components/controls/ControlPanel';
 
@@ -11,15 +12,11 @@ function setup(overrides: Partial<ControlPanelProps> = {}) {
     urlIsDense: false,
     sculpture: 'crystal',
     theme: 'nature',
-    brandForeground: '#111111',
-    brandBackground: '#f7f4ec',
     phase: 'sculpture',
-    contrastAdjusted: false,
     onDraftUrlChange: vi.fn(),
     onSubmitUrl: vi.fn(),
     onSculptureChange: vi.fn(),
     onThemeChange: vi.fn(),
-    onBrandColorsChange: vi.fn(),
     onReturn: vi.fn(),
     onShare: vi.fn(),
     onEmbed: vi.fn(),
@@ -69,8 +66,9 @@ describe('ControlPanel', () => {
     checked.focus();
     await user.keyboard('{ArrowRight}');
     expect(props.onThemeChange).toHaveBeenCalledWith('cyber');
+    // Left from the first chip wraps to the last one in the group.
     await user.keyboard('{ArrowLeft}');
-    expect(props.onThemeChange).toHaveBeenLastCalledWith('brand');
+    expect(props.onThemeChange).toHaveBeenLastCalledWith(THEME_IDS[THEME_IDS.length - 1]);
   });
 
   it('collapses to the scan cue and its actions when scan-ready', () => {
@@ -79,16 +77,6 @@ describe('ControlPanel', () => {
     expect(screen.queryByRole('radiogroup', { name: 'Theme' })).not.toBeInTheDocument();
     expect(screen.getByText('Scan now')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Save image' })).toBeInTheDocument();
-  });
-
-  it('shows brand colour pickers only for the brand theme', async () => {
-    const user = userEvent.setup();
-    const props = setup({ theme: 'brand' });
-    const picker = screen.getByLabelText('Code colour');
-    await user.click(picker);
-    expect(picker).toBeInTheDocument();
-    expect(screen.getByLabelText('Background')).toBeInTheDocument();
-    expect(props.onBrandColorsChange).not.toHaveBeenCalled();
   });
 
   it('keeps the hint line silent until it has something to say', () => {

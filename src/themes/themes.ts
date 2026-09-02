@@ -1,6 +1,6 @@
 import { toScanSafePair } from './contrast';
 
-export const THEME_IDS = ['nature', 'cyber', 'crystal', 'sunset', 'snow', 'brand'] as const;
+export const THEME_IDS = ['nature', 'cyber', 'crystal', 'sunset', 'snow'] as const;
 export type ThemeId = (typeof THEME_IDS)[number];
 
 export type ParticleKind = 'pollen' | 'grid' | 'shimmer' | 'fog' | 'snow' | 'none';
@@ -93,19 +93,6 @@ const THEME_LIST: Theme[] = [
     particles: 'snow',
     qr: { foreground: '#101a24', background: '#fbfdff' },
   },
-  {
-    id: 'brand',
-    label: 'Brand',
-    hint: 'Your two colours on a neutral studio backdrop',
-    backdrop: ['#f5f5f4', '#e2e2e0'],
-    voxels: ['#111111', '#333333', '#555555', '#777777'],
-    accent: '#111111',
-    ink: '#121212',
-    lights: { ambient: '#f2f2f2', key: '#ffffff', rim: '#d8d8d8' },
-    fog: { color: '#eeeeec', near: 0.6, far: 2.4 },
-    particles: 'none',
-    qr: { foreground: '#111111', background: '#f7f4ec' },
-  },
 ];
 
 export const THEMES: Readonly<Record<ThemeId, Theme>> = Object.fromEntries(
@@ -125,20 +112,9 @@ export function getTheme(id: ThemeId): Theme {
 /**
  * Resolve the colours the QR state will actually use.
  *
- * The `brand` theme takes the user's colours; every theme's result is passed
- * through the contrast guarantee, so no configuration can produce an
- * unscannable code.
+ * Every theme's pair goes through the contrast guarantee, so no theme can
+ * produce an unscannable code.
  */
-export function resolveQrColors(
-  theme: Theme,
-  brand?: { foreground?: string; background?: string },
-) {
-  const requested =
-    theme.id === 'brand'
-      ? {
-          foreground: brand?.foreground ?? theme.qr.foreground,
-          background: brand?.background ?? theme.qr.background,
-        }
-      : theme.qr;
-  return toScanSafePair(requested.foreground, requested.background);
+export function resolveQrColors(theme: Theme) {
+  return toScanSafePair(theme.qr.foreground, theme.qr.background);
 }

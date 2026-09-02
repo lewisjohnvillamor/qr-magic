@@ -2,16 +2,15 @@
 
 ## Music
 
-Six pieces by **Kevin MacLeod** (incompetech.com), one per theme:
+Five lofi pieces by **Kevin MacLeod** (incompetech.com), one per theme:
 
-| Theme   | Track            | ISRC         | File                       |
-| ------- | ---------------- | ------------ | -------------------------- |
-| Nature  | Ripples          | USUAN1100691 | `public/audio/nature.mp3`  |
-| Cyber   | Ethernight Club  | USUAN2100002 | `public/audio/cyber.mp3`   |
-| Crystal | Melodie Victoria | USUAN1100819 | `public/audio/crystal.mp3` |
-| Sunset  | Evening          | USUAN2300002 | `public/audio/sunset.mp3`  |
-| Snow    | Frost Waltz      | USUAN1100516 | `public/audio/snow.mp3`    |
-| Brand   | Our Story Begins | USUAN1100856 | `public/audio/brand.mp3`   |
+| Theme   | Track               | ISRC         | File                       |
+| ------- | ------------------- | ------------ | -------------------------- |
+| Nature  | Groove Grove        | USUAN1200054 | `public/audio/nature.mp3`  |
+| Cyber   | Soporific           | USUAN1100582 | `public/audio/cyber.mp3`   |
+| Crystal | Comfortable Mystery | USUAN1100287 | `public/audio/crystal.mp3` |
+| Sunset  | Late Night Radio    | USUAN2100003 | `public/audio/sunset.mp3`  |
+| Snow    | Study And Relax     | USUAN1900030 | `public/audio/snow.mp3`    |
 
 - Source: https://incompetech.com/music/royalty-free/
 - Licence: **Creative Commons Attribution 4.0** —

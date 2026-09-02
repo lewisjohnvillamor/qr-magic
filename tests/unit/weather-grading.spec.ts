@@ -10,6 +10,7 @@ function weather(patch: Partial<Weather> = {}): Weather {
     wind: 0,
     precipitation: 0,
     isDay: true,
+    place: 'Manila',
     ...patch,
   };
 }

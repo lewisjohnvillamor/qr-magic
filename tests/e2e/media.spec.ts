@@ -23,7 +23,7 @@ const GALLERY = [
   { sculpture: 'crystal', theme: 'crystal', label: 'sculpture-crystal' },
   { sculpture: 'gift', theme: 'sunset', label: 'sculpture-gift-sunset' },
   { sculpture: 'portal', theme: 'snow', label: 'sculpture-portal-snow' },
-  { sculpture: 'cube', theme: 'brand', label: 'sculpture-cube-brand' },
+  { sculpture: 'brand', theme: 'sunset', label: 'sculpture-brand-monogram' },
 ];
 
 test.skip(!CAPTURE, 'Set CAPTURE_MEDIA=1 (npm run media) to regenerate README images.');
