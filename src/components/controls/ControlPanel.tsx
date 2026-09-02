@@ -18,7 +18,6 @@ export interface ControlPanelProps {
   onSubmitUrl: () => void;
   onSculptureChange: (value: SculptureId) => void;
   onThemeChange: (value: ThemeId) => void;
-  onReturn: () => void;
   onShare: () => void;
   onEmbed: () => void;
   onSavePng: () => void;
@@ -58,19 +57,22 @@ export function ControlPanel(props: ControlPanelProps) {
   );
 
   // Scan-ready: everything but the code gets out of the way.
+  //
+  // There is no "Return to sculpture" button here any more. Pressing the code
+  // takes you back — the same gesture that revealed it — which is both fewer
+  // things to find and the fix for a real bug: on a 390px phone the button's
+  // 185px pushed the row 41px past the edge of the screen, so the one control
+  // that got you out of scan mode was partly untappable.
   if (scanReady) {
     return (
       <div className="panel panel--compact">
         <div className="panel-card">
           <p className="scan-cue">
             <strong>Scan now</strong>
-            <span>Point a camera at the code.</span>
+            <span>Point a camera at the code, or press it to go back.</span>
           </p>
           <span className="spacer" />
           {actions}
-          <button type="button" className="button button--primary" onClick={props.onReturn}>
-            Return to sculpture
-          </button>
         </div>
       </div>
     );

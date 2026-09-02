@@ -580,6 +580,7 @@ body {
 .scan-cue {
   display: flex;
   flex-direction: column;
+  min-width: 0;
   margin: 0;
   line-height: 1.25;
 }
@@ -594,11 +595,16 @@ body {
 }
 
 @media (max-width: 40rem) {
-  .scan-cue span {
-    display: none;
+  /* The second line used to be hidden here to make room for a 185px "Return
+     to sculpture" button, which still overflowed the row and pushed itself
+     off the edge of the screen. The button is gone — pressing the code goes
+     back — so the line that says so has room to stay. */
+  .panel--compact .panel-card {
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3);
   }
-  .panel--compact .button--primary {
-    padding: 0 var(--space-3);
+  .scan-cue span {
+    font-size: 0.72rem;
   }
 }
 
