@@ -12,8 +12,8 @@
  * is a regional phenomenon and the scene only needs to know rain from snow —
  * and it is deliberately *not* the viewer's actual position.
  *
- * Coordinates are derived from the public-domain IANA `zone1970.tab` and
- * `zone.tab`; see `tools/build-timezones.py`.
+ * Generated from the public-domain IANA `zone1970.tab` and `zone.tab`. Do not
+ * edit by hand; run `tools/build-timezones.py` instead.
  */
 
 export const TIMEZONE_COORDINATES: Record<string, readonly [number, number]> = {

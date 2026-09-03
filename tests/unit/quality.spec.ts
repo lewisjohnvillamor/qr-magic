@@ -1,10 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  QUALITY_LEVELS,
-  QUALITY_PROFILES,
-  detectQualityLevel,
-  isQualityLevel,
-} from '../../src/lib/quality';
+import { QUALITY_LEVELS, QUALITY_PROFILES, detectQualityLevel } from '../../src/lib/quality';
 
 describe('quality tiers', () => {
   it('defines a profile for every level', () => {
@@ -57,10 +52,5 @@ describe('quality tiers', () => {
     expect(
       detectQualityLevel({ hardwareConcurrency: 16, deviceMemory: 32, reducedMotion: true }),
     ).toBe('medium');
-  });
-
-  it('validates level strings', () => {
-    expect(isQualityLevel('high')).toBe(true);
-    expect(isQualityLevel('ultra')).toBe(false);
   });
 });

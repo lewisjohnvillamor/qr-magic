@@ -1,5 +1,6 @@
 import type { FormEvent } from 'react';
 import { ChipGroup } from './ChipGroup';
+import { ScanCue } from './ScanCue';
 import { ShareActions } from './ShareActions';
 import { SCULPTURES } from '../../voxel/types';
 import type { SculptureId } from '../../voxel/types';
@@ -67,10 +68,7 @@ export function ControlPanel(props: ControlPanelProps) {
     return (
       <div className="panel panel--compact">
         <div className="panel-card">
-          <p className="scan-cue">
-            <strong>Scan now</strong>
-            <span>Point a camera at the code, or press it to go back.</span>
-          </p>
+          <ScanCue />
           <span className="spacer" />
           {actions}
         </div>

@@ -41,10 +41,6 @@ export const QUALITY_PROFILES: Record<QualityLevel, QualityProfile> = {
   },
 };
 
-export function isQualityLevel(value: unknown): value is QualityLevel {
-  return typeof value === 'string' && (QUALITY_LEVELS as readonly string[]).includes(value);
-}
-
 export interface DeviceHints {
   hardwareConcurrency?: number;
   deviceMemory?: number;

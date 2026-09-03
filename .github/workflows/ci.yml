@@ -1,8 +1,12 @@
 name: CI
 
 on:
+  # Pushes to a branch with an open pull request are already covered by the
+  # `pull_request` trigger. Listening to both ran the whole suite twice on the
+  # same commit — including the seven-minute decode matrix — so `push` is
+  # scoped to main, where it is the post-merge check.
   push:
-    branches: ['**']
+    branches: [main]
   pull_request:
 
 concurrency:

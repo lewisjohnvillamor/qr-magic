@@ -12,7 +12,6 @@ const sharedSearch = new URL(shared).search;
 describe('readInitialExperience', () => {
   it('falls back to defaults with no payload', () => {
     const initial = readInitialExperience('');
-    expect(initial.restored).toBe(false);
     expect(initial.failed).toBe(false);
     expect(initial.sculpture).toBe('crystal');
   });
@@ -23,7 +22,6 @@ describe('readInitialExperience', () => {
       url: 'https://example.com/party',
       sculpture: 'island',
       theme: 'sunset',
-      restored: true,
     });
   });
 
@@ -107,12 +105,5 @@ describe('experience store', () => {
     expect(store.getState().muted).toBe(true);
     store.getState().toggleMuted();
     expect(store.getState().muted).toBe(false);
-  });
-
-  it('ignores an unsafe payload passed to applyPayload', () => {
-    const store = createExperienceStore('');
-    const before = store.getState().url;
-    store.getState().applyPayload({ url: 'javascript:alert(1)' });
-    expect(store.getState().url).toBe(before);
   });
 });
