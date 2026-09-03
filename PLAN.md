@@ -109,14 +109,14 @@ ZXing across viewports, DPRs, themes, sculptures and URL lengths.
 
 ## 4. Milestones and exit criteria
 
-| #   | Milestone                                                                        | Exit criterion                                                                     |
-| --- | -------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| 1   | Foundation — Vite/React/TS, lint, format, test, CI, shell, state, URL validation | Valid URL enters state; normalization + rejection fully unit-tested                |
-| 2   | Reliable 2D QR + share codec                                                     | Canonical QR decodes across the viewport matrix; payloads round-trip and fail safe |
-| 3   | Voxel scene                                                                      | Six procedural sculptures render in one instanced draw call and hold frame budget  |
-| 4   | QR transformation                                                                | WebGL-rendered QR decodes; reverse returns without state corruption                |
-| 5   | Themes and sharing                                                               | Every theme × sculpture combination survives share round-trip and decode           |
-| 6   | Production hardening                                                             | A11y, reduced motion, fallback, CSP, performance budgets, full decode matrix green |
+| #   | Milestone                                                                        | Exit criterion                                                                      |
+| --- | -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| 1   | Foundation — Vite/React/TS, lint, format, test, CI, shell, state, URL validation | Valid URL enters state; normalization + rejection fully unit-tested                 |
+| 2   | Reliable 2D QR + share codec                                                     | Canonical QR decodes across the viewport matrix; payloads round-trip and fail safe  |
+| 3   | Voxel scene                                                                      | Every procedural sculpture renders in one instanced draw call, holding frame budget |
+| 4   | QR transformation                                                                | WebGL-rendered QR decodes; reverse returns without state corruption                 |
+| 5   | Themes and sharing                                                               | Every theme × sculpture combination survives share round-trip and decode            |
+| 6   | Production hardening                                                             | A11y, reduced motion, fallback, CSP, performance budgets, full decode matrix green  |
 
 ---
 
@@ -173,9 +173,11 @@ announcements, fallback rendering.
 
 **End-to-end (Playwright + ZXing):** reveal the QR in a real browser, screenshot the
 scan-ready state, decode, and assert equality with the normalized URL — across
-320/375/430 px mobile widths, two desktop widths, DPR 1 and 2, all six themes, all
-six sculptures, short and long URLs, and reduced-motion mode. Share links are
-reloaded and re-decoded. The build fails on any decode miss.
+320/375/430 px mobile widths, two desktop widths, DPR 1 and 2, and every theme
+and sculpture — enumerated from `THEME_IDS` and `SCULPTURE_IDS` rather than a
+copied list, so adding one cannot ship without a decode test — plus short and
+long URLs and reduced-motion mode. Share links are reloaded and re-decoded. The
+build fails on any decode miss.
 
 ---
 

@@ -115,7 +115,13 @@ export function buildModuleRamp(theme: Theme): ModuleRamp {
   return { data, structural };
 }
 
-/** Widest luminance spread across a ramp — the number that decides scannability. */
+/**
+ * Widest luminance spread across a ramp — the number that decides scannability.
+ *
+ * Only the tests call it, to hold the mosaic inside the band that a binarizer
+ * can still read. Keeping the measurement next to the thing it measures is
+ * what stops the two drifting apart.
+ */
 export function rampLuminanceSpread(ramp: ModuleRamp): number {
   const all = [...ramp.data, ...ramp.structural].map((hex) => {
     const rgb = parseHexColor(hex) ?? BLACK;

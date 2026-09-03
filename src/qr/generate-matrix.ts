@@ -110,7 +110,13 @@ export function moduleAt(matrix: QrMatrix, row: number, column: number): boolean
   return matrix.modules[row * matrix.size + column] === true;
 }
 
-/** Count of dark modules — the number of voxels the QR state requires. */
+/**
+ * Count of dark modules — the number of voxels the QR state requires.
+ *
+ * Only the tests call it, to check the layout builds exactly one tile per dark
+ * module. It stays here because that is a fact about a matrix, and an unused
+ * export is tree-shaken out of the bundle.
+ */
 export function countDarkModules(matrix: QrMatrix): number {
   let count = 0;
   for (const module of matrix.modules) if (module) count += 1;
