@@ -62,7 +62,7 @@ React UI  ──►  experience store (validated state)
                           │
                  voxel/  build-qr-layout + build-sculpture-layout → VoxelInstance[]
                           │
-                 animation/  one reversible GSAP master timeline → progress 0..1
+                 animation/  one reversible master timeline → progress 0..1
                           │
                  scene/   InstancedMesh (one draw call) + scan-safe backing plane
 ```
@@ -184,5 +184,5 @@ build fails on any decode miss.
 ## 9. Definition of done
 
 All twelve MVP acceptance criteria in spec §20, plus: `npm run verify` green,
-e2e decode matrix green, no disposed-object leaks when switching sculpture or theme
-50×, and zero copied ICQR branding, assets, audio or source.
+e2e decode matrix green, and no disposed-object leaks when switching sculpture
+or theme 50×.

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 import type { RefObject } from 'react';
 import { createRevealTimeline, createRevealValues } from '../animation/create-reveal-timeline';
 import type { RevealValues } from '../animation/create-reveal-timeline';
+import type { Timeline } from '../animation/timeline';
 
 export interface UseRevealOptions {
   reducedMotion: boolean;
@@ -26,7 +27,7 @@ export interface RevealController {
 export function useReveal(options: UseRevealOptions): RevealController {
   const { reducedMotion, onRevealComplete, onReturnComplete } = options;
   const values = useRef<RevealValues>(createRevealValues());
-  const timelineRef = useRef<gsap.core.Timeline | null>(null);
+  const timelineRef = useRef<Timeline<RevealValues> | null>(null);
 
   const callbacks = useRef({ onRevealComplete, onReturnComplete });
   useEffect(() => {
