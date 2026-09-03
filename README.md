@@ -338,12 +338,12 @@ captures them from the running app through the same Playwright harness the
 tests use, so a README picture cannot drift from what the product does. It is
 opt-in, so an ordinary test run never writes into the working tree.
 
-This product contains no ICQR branding, assets, audio or source code. The two
-interaction cues and the per-theme ambient bed are synthesised at runtime with
-the Web Audio API. Under them sits one licensed lofi track per theme, credited in
-[ATTRIBUTION.md](ATTRIBUTION.md) and on the sound control itself. Everything
-starts muted, and only the current theme's track is fetched, only once someone
-turns the sound on — so a visitor who never unmutes downloads none of it.
+The two interaction cues and the per-theme ambient bed are synthesised at
+runtime with the Web Audio API. Under them sits one licensed lofi track per
+theme, credited in [ATTRIBUTION.md](ATTRIBUTION.md) and on the sound control
+itself. Everything starts muted, and only the current theme's track is fetched,
+only once someone turns the sound on — so a visitor who never unmutes downloads
+none of it.
 
 ---
 
@@ -351,7 +351,8 @@ turns the sound on — so a visitor who never unmutes downloads none of it.
 
 Created by **Lewis John Villamor**.
 
-Interaction pattern inspired by ICQR's Magic Tree. All branding, interface
-design, animation, sound, 3D content and source code in this project are
-original — no ICQR assets or code are used. Licensed under the MIT License; see
-[LICENSE](LICENSE).
+All branding, interface design, animation, sound, 3D content and source code in
+this project are original. Third-party assets are limited to the music and the
+weather data, both credited in [ATTRIBUTION.md](ATTRIBUTION.md).
+
+Licensed under the MIT License; see [LICENSE](LICENSE).

@@ -53,4 +53,4 @@ transmitted to Open-Meteo or anywhere else.
 
 All other assets in this repository — 3D content, sound cues, the ambient
 synthesis, icons, interface design and source code — are original to this
-project. No ICQR branding, assets, audio or code are used.
+project.
