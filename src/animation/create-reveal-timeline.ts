@@ -1,4 +1,4 @@
-import gsap from 'gsap';
+import { Timeline } from './timeline';
 
 /**
  * The mutable value the whole transformation reads from.
@@ -27,15 +27,14 @@ export function createRevealValues(): RevealValues {
   return { morph: 0, scatter: 0, camera: 0, lock: 0, backing: 0, squash: 1, idle: 1 };
 }
 
-export interface TimelineCallbacks {
+export interface RevealCallbacks {
   onRevealComplete?: () => void;
   onReturnComplete?: () => void;
-  onUpdate?: (progress: number) => void;
 }
 
 export interface RevealTimelineOptions {
   reducedMotion: boolean;
-  callbacks?: TimelineCallbacks;
+  callbacks?: RevealCallbacks;
 }
 
 /**
@@ -48,13 +47,10 @@ export interface RevealTimelineOptions {
 export function createRevealTimeline(
   values: RevealValues,
   options: RevealTimelineOptions,
-): gsap.core.Timeline {
+): Timeline<RevealValues> {
   const { reducedMotion, callbacks } = options;
 
-  const timeline = gsap.timeline({
-    paused: true,
-    defaults: { ease: 'power2.inOut' },
-    onUpdate: () => callbacks?.onUpdate?.(timeline.progress()),
+  const timeline = new Timeline(values, {
     onComplete: () => callbacks?.onRevealComplete?.(),
     onReverseComplete: () => callbacks?.onReturnComplete?.(),
   });
@@ -63,28 +59,30 @@ export function createRevealTimeline(
     // No scatter, no camera swing: a short, direct interpolation that still ends
     // in the exact frontal lock the QR state requires.
     timeline
-      .to(values, { camera: 1, duration: 0.45, ease: 'power1.inOut' }, 0)
-      .to(values, { idle: 0, duration: 0.2 }, 0)
-      .to(values, { morph: 1, duration: 0.5, ease: 'power1.inOut' }, 0)
-      .to(values, { lock: 1, backing: 1, duration: 0.25, ease: 'power1.out' }, 0.35);
+      .to('camera', 1, { at: 0, duration: 0.45, ease: 'power1.inOut' })
+      .to('idle', 0, { at: 0, duration: 0.2 })
+      .to('morph', 1, { at: 0, duration: 0.5, ease: 'power1.inOut' })
+      .to('lock', 1, { at: 0.35, duration: 0.25, ease: 'power1.out' })
+      .to('backing', 1, { at: 0.35, duration: 0.25, ease: 'power1.out' });
     return timeline;
   }
 
   timeline
     // Anticipation — the sculpture gathers itself.
-    .to(values, { squash: 0.9, idle: 0.35, duration: 0.25, ease: 'power2.out' }, 0)
+    .to('squash', 0.9, { at: 0, duration: 0.25, ease: 'power2.out' })
+    .to('idle', 0.35, { at: 0, duration: 0.25, ease: 'power2.out' })
     // Camera alignment — swing round to the QR viewing angle.
-    .to(values, { camera: 1, duration: 0.65, ease: 'power2.inOut' }, 0.15)
+    .to('camera', 1, { at: 0.15, duration: 0.65, ease: 'power2.inOut' })
     // Scatter — cubes separate, then gather again during reorganization.
-    .to(values, { scatter: 1, duration: 0.45, ease: 'power2.out' }, 0.25)
-    .to(values, { squash: 1, duration: 0.4 }, 0.25)
-    .to(values, { idle: 0, duration: 0.4 }, 0.4)
+    .to('scatter', 1, { at: 0.25, duration: 0.45, ease: 'power2.out' })
+    .to('squash', 1, { at: 0.25, duration: 0.4 })
+    .to('idle', 0, { at: 0.4, duration: 0.4 })
     // Reorganization — the long move onto the grid.
-    .to(values, { morph: 1, duration: 0.9, ease: 'power3.inOut' }, 0.7)
-    .to(values, { scatter: 0, duration: 0.75, ease: 'power2.inOut' }, 0.75)
+    .to('morph', 1, { at: 0.7, duration: 0.9, ease: 'power3.inOut' })
+    .to('scatter', 0, { at: 0.75, duration: 0.75, ease: 'power2.inOut' })
     // Lock — rotations snap, spacing becomes exact, backing plane resolves.
-    .to(values, { lock: 1, duration: 0.25, ease: 'power4.out' }, 1.5)
-    .to(values, { backing: 1, duration: 0.3, ease: 'power1.out' }, 1.45);
+    .to('lock', 1, { at: 1.5, duration: 0.25, ease: 'power4.out' })
+    .to('backing', 1, { at: 1.45, duration: 0.3, ease: 'power1.out' });
 
   return timeline;
 }

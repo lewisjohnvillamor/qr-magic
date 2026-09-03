@@ -82,13 +82,13 @@ React UI  ──►  experience store (validated state)
                           │
               src/voxel/  build-qr-layout + build-sculpture-layout → VoxelInstance[]
                           │
-          src/animation/  one reversible GSAP master timeline → progress 0..1
+          src/animation/  one reversible master timeline → progress 0..1
                           │
    src/components/scene/  InstancedMesh (one draw call) + scan-safe backing plane
 ```
 
 Each module owns one thing. The QR engine does not know what a voxel is; the
-scene renders but never holds application state; GSAP animates but never
+scene renders but never holds application state; the timeline animates but never
 validates a URL. Nothing calls `setState` during the animation loop — the frame
 loop writes matrices into a single `InstancedMesh`.
 
@@ -328,10 +328,16 @@ works as long as the headers come with it.
 
 ## Development notes
 
-Three.js and GSAP guidance were used while building this (scene and instancing
-discipline, timeline and cleanup practice). They are development references, not
-runtime dependencies. Three.js DevTools MCP is optional tooling for inspecting a
-live scene; the deployed product does not depend on it.
+Three.js guidance was used while building this (scene and instancing
+discipline). It is a development reference, not a runtime dependency. Three.js
+DevTools MCP is optional tooling for inspecting a live scene; the deployed
+product does not depend on it.
+
+The reveal runs on a small timeline of its own (`src/animation/timeline.ts`)
+rather than an animation library. It needs one thing from one — a paused,
+reversible sequence of eased tweens over a plain object that lands on its end
+values exactly — and that is a hundred lines. Writing them keeps every
+dependency this project ships under a licence compatible with its own.
 
 The images in this README are generated, not hand-picked: `npm run media`
 captures them from the running app through the same Playwright harness the
@@ -355,4 +361,6 @@ All branding, interface design, animation, sound, 3D content and source code in
 this project are original. Third-party assets are limited to the music and the
 weather data, both credited in [ATTRIBUTION.md](ATTRIBUTION.md).
 
-Licensed under the MIT License; see [LICENSE](LICENSE).
+Licensed under the **GNU General Public License v3.0** — see [LICENSE](LICENSE).
+The licence covers the source; the music and weather data carry their own terms,
+recorded in [ATTRIBUTION.md](ATTRIBUTION.md).

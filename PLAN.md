@@ -62,7 +62,7 @@ React UI  ──►  experience store (validated state)
                           │
                  voxel/  build-qr-layout + build-sculpture-layout → VoxelInstance[]
                           │
-                 animation/  one reversible GSAP master timeline → progress 0..1
+                 animation/  one reversible master timeline → progress 0..1
                           │
                  scene/   InstancedMesh (one draw call) + scan-safe backing plane
 ```
