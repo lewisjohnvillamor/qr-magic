@@ -2,7 +2,14 @@ import { IconButton } from './controls/icons';
 import { WeatherBadge } from './WeatherBadge';
 import type { Weather } from '../lib/weather';
 
-const CONTACT_EMAIL = 'lewisvillamor26@gmail.com';
+/**
+ * Where the invitation goes.
+ *
+ * A Buy Me a Coffee page rather than a `mailto:` — it carries a message form,
+ * so it serves the commission enquiry and the tip alike, and it keeps a
+ * personal address off a page that anyone can embed anywhere.
+ */
+const SUPPORT_URL = 'https://buymeacoffee.com/lewisjohnvil';
 
 export interface MastheadProps {
   /** Hidden while the code is locked: nothing should sit near a scan target. */
@@ -20,7 +27,8 @@ export interface MastheadProps {
  *
  * The invitation is the point of the line rather than a tagline about the
  * product: someone looking at a sculpture of their own link already knows what
- * it is, so the useful thing to tell them is that it can be made theirs.
+ * it is, so the useful thing to tell them is that it can be made theirs — and
+ * where to go to ask for that, or to say thanks.
  */
 export function Masthead({ dimmed, muted, onToggleMuted, musicCredit, weather }: MastheadProps) {
   return (
@@ -28,8 +36,16 @@ export function Masthead({ dimmed, muted, onToggleMuted, musicCredit, weather }:
       <div className="masthead-brand">
         <h1 className="wordmark">VoxelQR</h1>
         <p className="tagline">
-          Interested in customizing this to your brand? Contact me @{' '}
-          <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
+          Interested in customizing this to your brand?{' '}
+          <a
+            className="support-link"
+            href={SUPPORT_URL}
+            target="_blank"
+            rel="noreferrer noopener"
+            title="Say hello, commission a custom build, or just buy me a coffee"
+          >
+            <span aria-hidden="true">☕</span> Buy me a coffee
+          </a>
         </p>
       </div>
       <span className="spacer" />

@@ -67,4 +67,25 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm audit --audit-level=high
+
+      # Advisory, not a gate — deliberately.
+      #
+      # `npm audit` asks the bulk advisory endpoint and falls back to a "quick"
+      # one that npm is retiring. That fallback answers a tree this size with a
+      # 400 ("Invalid package tree") after hanging for several minutes, and it
+      # is intermittent: the same command on the same lockfile succeeds one
+      # minute and fails the next, with or without `--omit=dev`. A check that
+      # red-lights at random blocks every merge while saying nothing about the
+      # dependencies, which is worse than not having it.
+      #
+      # The lockfile is not the problem. `npm ci` above audits it through the
+      # working endpoint and prints the count, so the number is still in this
+      # job's log on every run.
+      #
+      # Durable alerting belongs in Dependabot (Settings → Code security),
+      # which watches the lockfile continuously and depends on neither this
+      # endpoint nor CI running at all.
+      - name: Audit dependencies (advisory)
+        continue-on-error: true
+        timeout-minutes: 2
+        run: npm audit --audit-level=high
