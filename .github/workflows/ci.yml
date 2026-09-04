@@ -67,4 +67,25 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm audit --audit-level=high
+
+      # The gate: the packages that actually reach a visitor.
+      #
+      # This used to audit the whole tree, and stopped working when npm retired
+      # the "quick audit" endpoint — `npm audit` falls back to it for a tree
+      # this size and now gets a 400 ("Invalid package tree"), after hanging for
+      # six minutes. The lockfile is fine: `npm ci` above audits it through the
+      # bulk endpoint and reports the count, and this same lockfile passed the
+      # old command a day earlier.
+      #
+      # Scoped to production dependencies, the tree is small enough for the
+      # bulk endpoint and the command returns immediately. That is also the set
+      # worth blocking a merge on: this ships as a static site, so nothing in
+      # devDependencies is ever served to anyone.
+      - name: Audit shipped dependencies
+        run: npm audit --omit=dev --audit-level=high
+
+      # Build tooling still gets looked at, but a retired registry endpoint
+      # must not be able to block a merge on its own.
+      - name: Audit build tooling (informational)
+        continue-on-error: true
+        run: npm audit --audit-level=high
