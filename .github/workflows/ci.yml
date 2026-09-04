@@ -85,7 +85,10 @@ jobs:
         run: npm audit --omit=dev --audit-level=high
 
       # Build tooling still gets looked at, but a retired registry endpoint
-      # must not be able to block a merge on its own.
+      # must not be able to block a merge on its own — nor sit there burning
+      # runner minutes. The failing call hangs for six of them before giving
+      # up, so it is capped well short of that.
       - name: Audit build tooling (informational)
         continue-on-error: true
+        timeout-minutes: 2
         run: npm audit --audit-level=high
