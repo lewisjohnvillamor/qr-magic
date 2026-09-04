@@ -353,9 +353,21 @@ none of it.
 
 ---
 
+## Support
+
+VoxelQR is free and open source, and built in spare hours. If it is useful to
+you — or you want it in your own brand's colours, sculpture and palette — the
+same link does both:
+
+**[☕ Buy me a coffee](https://buymeacoffee.com/lewisjohnvil)**
+
+Commission enquiries are welcome through the message form there.
+
+---
+
 ## Credits
 
-Created by **Lewis John Villamor**.
+Created by **Lewis John Villamor** — [buymeacoffee.com/lewisjohnvil](https://buymeacoffee.com/lewisjohnvil).
 
 All branding, interface design, animation, sound, 3D content and source code in
 this project are original. Third-party assets are limited to the music and the

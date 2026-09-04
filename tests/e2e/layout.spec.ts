@@ -36,9 +36,13 @@ test.describe('mobile reach', () => {
         expect(box!.y, `${name} top within viewport`).toBeGreaterThanOrEqual(0);
       }
 
-      // The contact address is the only actionable part of the masthead, so it
+      // The support link is the only actionable part of the masthead, so it
       // must survive the narrow layout rather than being elided away.
-      await expect(page.getByRole('link', { name: /lewisvillamor26@gmail\.com/ })).toBeVisible();
+      const support = page.getByRole('link', { name: /Buy me a coffee/ });
+      await expect(support).toBeVisible();
+      await expect(support).toHaveAttribute('href', 'https://buymeacoffee.com/lewisjohnvil');
+      // Opens away from the app, and cannot reach back into it.
+      await expect(support).toHaveAttribute('rel', /noopener/);
     });
   }
 });
