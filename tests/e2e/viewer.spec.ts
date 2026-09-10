@@ -16,7 +16,7 @@ test.describe('viewer mode', () => {
     await page.locator('.scene canvas').waitFor({ state: 'attached' });
 
     // Nothing here can change what was shared.
-    await expect(page.locator('#destination-url')).toHaveCount(0);
+    await expect(page.getByTestId('payload-input')).toHaveCount(0);
     await expect(page.getByRole('group', { name: 'Theme' })).toHaveCount(0);
     await expect(page.getByRole('group', { name: 'Sculpture' })).toHaveCount(0);
 
@@ -69,6 +69,6 @@ test.describe('viewer mode', () => {
 
     // The author's own address keeps the editor.
     expect(page.url()).not.toContain('view=1');
-    await expect(page.locator('#destination-url')).toBeVisible();
+    await expect(page.getByTestId('payload-input')).toBeVisible();
   });
 });

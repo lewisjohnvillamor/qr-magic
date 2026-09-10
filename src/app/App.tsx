@@ -2,6 +2,7 @@ import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } fro
 import { useExperienceStore } from './experience-store';
 import { useReveal } from './use-reveal';
 import { ControlPanel } from '../components/controls/ControlPanel';
+import { ConfigDrawer } from '../components/controls/ConfigDrawer';
 import { ViewerPanel } from '../components/controls/ViewerPanel';
 import { FallbackQr } from '../components/fallback/FallbackQr';
 import { LiveRegion } from '../components/LiveRegion';
@@ -17,6 +18,9 @@ import { playAmbient, stopAmbient, disposeAmbient } from '../lib/ambient';
 import { musicCredit } from '../lib/music';
 import { useWeather } from '../lib/use-weather';
 import { SHARE_PARAM, isReadOnlySearch } from '../sharing/share-codec';
+import type { PayloadKind } from '../qr/payloads';
+import { useImage } from '../lib/use-image';
+import { readLogoFile } from '../qr/logo';
 
 const VoxelScene = lazy(() =>
   import('../components/scene/VoxelScene').then((module) => ({ default: module.VoxelScene })),
@@ -51,6 +55,10 @@ export function App() {
   const state = useExperienceStore();
   const [embedMode] = useState(readEmbedMode);
   const [viewerMode] = useState(readViewerMode);
+  const [configOpen, setConfigOpen] = useState(false);
+  // Decoded once here and handed to whichever renderer is live, so the scene
+  // and the no-WebGL fallback draw the same picture from the same element.
+  const logoImage = useImage(state.logo);
   const theme = getTheme(state.theme);
   const qrColors = useMemo(() => resolveQrColors(theme), [theme]);
   const quality = QUALITY_PROFILES[state.quality];
@@ -138,12 +146,34 @@ export function App() {
   const handleReveal = useCallback(() => {
     // The reveal commits whatever is in the field first, so typing a link and
     // pressing the primary button is the whole flow.
-    const result = useExperienceStore.getState().commitUrl();
+    const result = useExperienceStore.getState().commitPayload();
     if (!result.ok) return;
     useExperienceStore.setState({ phase: 'revealing', announcement: 'Revealing the QR code.' });
     playCue('reveal', mutedRef.current);
     controller.reveal();
   }, [controller]);
+
+  /**
+   * Switching kind re-encodes immediately.
+   *
+   * Picking "Wi-Fi" and seeing the sculpture still standing on a link would be
+   * a lie about what is on screen, so the commit happens on the switch. It can
+   * legitimately fail — the new kind's fields are usually empty — and the
+   * message under the field is the right way to say so.
+   */
+  const handlePayloadKindChange = useCallback((kind: PayloadKind) => {
+    useExperienceStore.getState().setPayloadKind(kind);
+    useExperienceStore.getState().commitPayload();
+  }, []);
+
+  const handleLogoFile = useCallback(async (file: File) => {
+    const result = await readLogoFile(file);
+    if (!result.ok) {
+      useExperienceStore.setState({ announcement: result.message });
+      return;
+    }
+    useExperienceStore.getState().setLogo(result.dataUrl);
+  }, []);
 
   const handleReturn = useCallback(() => {
     useExperienceStore.setState({
@@ -155,7 +185,20 @@ export function App() {
 
   // Changing what the code encodes invalidates the current reveal, so the
   // timeline is reset rather than left mid-flight against a stale layout.
-  const layoutKey = `${state.matrix.value}:${state.sculpture}:${state.quality}`;
+  //
+  // The value alone is not enough to identify a layout. Switching to dotted
+  // modules or adding a logo raises the error-correction floor, which changes
+  // the module count for the same string — a different matrix, a different
+  // number of tiles, and a timeline mid-flight against a layout that no longer
+  // exists. Size and level are what actually decide the layout, so they are
+  // what the key is made of.
+  const layoutKey = [
+    state.matrix.value,
+    state.matrix.size,
+    state.matrix.errorCorrectionLevel,
+    state.sculpture,
+    state.quality,
+  ].join(':');
   const previousKey = useRef(layoutKey);
   useEffect(() => {
     if (previousKey.current === layoutKey) return;
@@ -169,14 +212,14 @@ export function App() {
     () => state.shareUrl(window.location.href, { readOnly: true }),
     // Recomputed whenever any part of the shared payload changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [state.url, state.sculpture, state.theme],
+    [state.value, state.sculpture, state.theme, state.moduleShape, state.cornerShape],
   );
 
   /** The author's own address: the same payload, but still editable. */
   const authoringUrl = useMemo(
     () => state.shareUrl(window.location.href),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [state.url, state.sculpture, state.theme],
+    [state.value, state.sculpture, state.theme, state.moduleShape, state.cornerShape],
   );
 
   // Keep the address bar in sync so a reload or a manual copy restores the same
@@ -270,7 +313,7 @@ export function App() {
       type="button"
       className="scene-action"
       onClick={scanReady ? handleReturn : handleReveal}
-      disabled={busy || Boolean(state.urlError)}
+      disabled={busy || Boolean(state.valueError)}
       aria-label={scanReady ? 'Return to sculpture' : 'Reveal QR'}
       data-testid="reveal-button"
     >
@@ -313,6 +356,9 @@ export function App() {
               scanInset={SCAN_INSET}
               active={documentVisible}
               weather={weather}
+              moduleShape={state.moduleShape}
+              cornerShape={state.cornerShape}
+              logo={logoImage}
             />
           </Suspense>
         ) : (
@@ -320,6 +366,10 @@ export function App() {
             matrix={state.matrix}
             foreground={qrColors.foreground}
             background={qrColors.background}
+            description={state.describe()}
+            moduleShape={state.moduleShape}
+            cornerShape={state.cornerShape}
+            logo={logoImage}
             reason="This device cannot run the 3D scene, so here is the code on its own."
           />
         )}
@@ -327,7 +377,8 @@ export function App() {
         {revealControl}
 
         <ViewerPanel
-          destination={state.url}
+          destination={state.describe()}
+          isLink={state.payloadKind === 'url'}
           phase={state.phase}
           onShare={() => void handleShare()}
           onEmbed={() => void handleEmbed()}
@@ -359,6 +410,9 @@ export function App() {
               scanInset={0}
               active={documentVisible}
               weather={weather}
+              moduleShape={state.moduleShape}
+              cornerShape={state.cornerShape}
+              logo={logoImage}
             />
           </Suspense>
         ) : (
@@ -366,6 +420,10 @@ export function App() {
             matrix={state.matrix}
             foreground={qrColors.foreground}
             background={qrColors.background}
+            description={state.describe()}
+            moduleShape={state.moduleShape}
+            cornerShape={state.cornerShape}
+            logo={logoImage}
             reason="This device cannot run the 3D scene, so here is the code on its own."
           />
         )}
@@ -410,6 +468,8 @@ export function App() {
         onToggleMuted={state.toggleMuted}
         musicCredit={musicCredit(state.theme)}
         weather={weather}
+        onOpenConfig={() => setConfigOpen((open) => !open)}
+        configOpen={configOpen}
       />
 
       {webglSupported ? (
@@ -426,6 +486,9 @@ export function App() {
             scanInset={SCAN_INSET}
             active={documentVisible}
             weather={weather}
+            moduleShape={state.moduleShape}
+            cornerShape={state.cornerShape}
+            logo={logoImage}
           />
         </Suspense>
       ) : (
@@ -433,6 +496,10 @@ export function App() {
           matrix={state.matrix}
           foreground={qrColors.foreground}
           background={qrColors.background}
+          description={state.describe()}
+          moduleShape={state.moduleShape}
+          cornerShape={state.cornerShape}
+          logo={logoImage}
           reason="This device cannot run the 3D scene, so here is the code on its own. Everything else still works."
         />
       )}
@@ -440,19 +507,37 @@ export function App() {
       {revealControl}
 
       <ControlPanel
-        draftUrl={state.draftUrl}
-        urlError={state.urlError}
-        urlIsDense={state.urlIsDense}
+        payloadKind={state.payloadKind}
+        draft={state.draft}
+        valueError={state.valueError}
+        valueIsDense={state.valueIsDense}
         sculpture={state.sculpture}
         theme={state.theme}
         phase={state.phase}
-        onDraftUrlChange={state.setDraftUrl}
-        onSubmitUrl={() => state.commitUrl()}
+        onDraftFieldChange={state.setDraftField}
+        onSubmit={() => state.commitPayload()}
         onSculptureChange={state.setSculpture}
         onThemeChange={state.setTheme}
         onShare={() => void handleShare()}
         onEmbed={() => void handleEmbed()}
         onSavePng={handleSavePng}
+      />
+
+      <ConfigDrawer
+        open={configOpen}
+        onClose={() => setConfigOpen(false)}
+        payloadKind={state.payloadKind}
+        draft={state.draft}
+        moduleShape={state.moduleShape}
+        cornerShape={state.cornerShape}
+        logo={state.logo}
+        onPayloadKindChange={handlePayloadKindChange}
+        onDraftFieldChange={state.setDraftField}
+        onCommit={() => state.commitPayload()}
+        onModuleShapeChange={state.setModuleShape}
+        onCornerShapeChange={state.setCornerShape}
+        onLogoFile={(file) => void handleLogoFile(file)}
+        onLogoClear={() => state.setLogo(null)}
       />
 
       <LiveRegion message={state.announcement} />

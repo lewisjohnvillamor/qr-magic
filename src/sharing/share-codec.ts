@@ -1,6 +1,7 @@
 import { experiencePayloadSchema, EXPERIENCE_SCHEMA_VERSION } from './experience-schema';
 import type { ExperiencePayload } from './experience-schema';
 import { normalizeUrl } from '../qr/normalize-url';
+import { encodePayload } from '../qr/payloads';
 
 /** Query parameter carrying the encoded experience. */
 export const SHARE_PARAM = 'experience';
@@ -75,12 +76,31 @@ export function decodeExperience(encoded: string | null | undefined): DecodeResu
   const parsed = experiencePayloadSchema.safeParse(raw);
   if (!parsed.success) return { ok: false, reason: 'invalid' };
 
-  // The destination is re-validated on the way in: an encoded `javascript:` URL
-  // must not survive a round trip through a share link.
-  const url = normalizeUrl(parsed.data.url);
-  if (!url.ok) return { ok: false, reason: 'invalid' };
+  return revalidate(parsed.data);
+}
 
-  return { ok: true, payload: { ...parsed.data, url: url.url } };
+/**
+ * Re-derive the encoded value rather than trusting the one in the link.
+ *
+ * A share link is untrusted input from the address bar, and the string inside it
+ * becomes a QR code someone else's phone will act on. Where the draft fields
+ * travelled with it, the value is simply re-encoded from them: whatever comes
+ * out is by construction something this app's own encoders produced, so a
+ * hand-edited `javascript:` destination or a mangled `WIFI:` payload cannot
+ * survive the trip. Where they did not — a version-1 link, which only ever
+ * carried a URL — the destination is re-validated the way it always was.
+ */
+function revalidate(payload: ExperiencePayload): DecodeResult {
+  if (payload.f) {
+    const encoded = encodePayload(payload.kind, payload.f);
+    if (!encoded.ok) return { ok: false, reason: 'invalid' };
+    return { ok: true, payload: { ...payload, url: encoded.value } };
+  }
+
+  if (payload.kind !== 'url') return { ok: false, reason: 'invalid' };
+  const url = normalizeUrl(payload.url);
+  if (!url.ok) return { ok: false, reason: 'invalid' };
+  return { ok: true, payload: { ...payload, url: url.url } };
 }
 
 export interface ShareUrlOptions {

@@ -11,7 +11,8 @@
 
 import type { ReactNode } from 'react';
 
-export type IconName = 'share' | 'embed' | 'download' | 'sound-on' | 'sound-off' | 'check';
+export type IconName =
+  'share' | 'embed' | 'download' | 'sound-on' | 'sound-off' | 'check' | 'settings';
 
 const PATHS: Record<IconName, ReactNode> = {
   share: (
@@ -49,6 +50,16 @@ const PATHS: Record<IconName, ReactNode> = {
     </>
   ),
   check: <path d="m4 10.5 4 4 8-9" />,
+  settings: (
+    <>
+      <path d="M3 6h9" />
+      <path d="M16 6h1" />
+      <path d="M3 14h5" />
+      <path d="M12 14h5" />
+      <circle cx="14" cy="6" r="2" />
+      <circle cx="10" cy="14" r="2" />
+    </>
+  ),
 };
 
 export interface IconProps {

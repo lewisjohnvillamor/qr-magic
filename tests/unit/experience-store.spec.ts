@@ -4,8 +4,12 @@ import { buildShareUrl, SHARE_PARAM } from '../../src/sharing/share-codec';
 
 const shared = buildShareUrl('https://voxelqr.example/', {
   url: 'https://example.com/party',
+  kind: 'url',
+  f: { url: 'https://example.com/party' },
   sculpture: 'island',
   theme: 'sunset',
+  module: 'square',
+  corner: 'square',
 });
 const sharedSearch = new URL(shared).search;
 
@@ -19,7 +23,7 @@ describe('readInitialExperience', () => {
   it('restores a shared experience', () => {
     const initial = readInitialExperience(sharedSearch);
     expect(initial).toMatchObject({
-      url: 'https://example.com/party',
+      value: 'https://example.com/party',
       sculpture: 'island',
       theme: 'sunset',
     });
@@ -28,7 +32,7 @@ describe('readInitialExperience', () => {
   it('reports a manipulated payload as failed rather than throwing', () => {
     const initial = readInitialExperience(`?${SHARE_PARAM}=not-a-payload`);
     expect(initial.failed).toBe(true);
-    expect(initial.url).toContain('https://');
+    expect(initial.value).toContain('https://');
   });
 });
 
@@ -36,48 +40,50 @@ describe('experience store', () => {
   it('commits a valid URL and regenerates the matrix', () => {
     const store = createExperienceStore('');
     const before = store.getState().matrix.value;
-    store.getState().setDraftUrl('example.org/new');
-    const result = store.getState().commitUrl();
+    store.getState().setDraftField('url', 'example.org/new');
+    const result = store.getState().commitPayload();
     expect(result.ok).toBe(true);
-    expect(store.getState().url).toBe('https://example.org/new');
+    expect(store.getState().value).toBe('https://example.org/new');
     expect(store.getState().matrix.value).toBe('https://example.org/new');
     expect(store.getState().matrix.value).not.toBe(before);
-    expect(store.getState().urlError).toBeNull();
+    expect(store.getState().valueError).toBeNull();
   });
 
   it('surfaces a validation error and announces it', () => {
     const store = createExperienceStore('');
-    store.getState().setDraftUrl('javascript:alert(1)');
-    const result = store.getState().commitUrl();
+    store.getState().setDraftField('url', 'javascript:alert(1)');
+    const result = store.getState().commitPayload();
     expect(result.ok).toBe(false);
-    expect(store.getState().urlError).toMatch(/not supported/);
-    expect(store.getState().announcement).toBe(store.getState().urlError);
+    expect(store.getState().valueError).toMatch(/not supported/);
+    expect(store.getState().announcement).toBe(store.getState().valueError);
   });
 
   it('leaves the previous working code in place after a bad edit', () => {
     const store = createExperienceStore('');
     const good = store.getState().matrix.value;
-    store.getState().setDraftUrl('nope');
-    store.getState().commitUrl();
+    store.getState().setDraftField('url', 'nope');
+    store.getState().commitPayload();
     expect(store.getState().matrix.value).toBe(good);
   });
 
   it('warns about dense codes', () => {
     const store = createExperienceStore('');
-    store.getState().commitUrl(`https://example.com/${'a'.repeat(320)}`);
-    expect(store.getState().urlIsDense).toBe(true);
+    store.getState().setDraftField('url', `https://example.com/${'a'.repeat(320)}`);
+    store.getState().commitPayload();
+    expect(store.getState().valueIsDense).toBe(true);
     expect(store.getState().announcement).toMatch(/dense/);
   });
 
   it('round-trips its own share URL', () => {
     const store = createExperienceStore('');
-    store.getState().commitUrl('https://example.com/deep/link?x=1');
+    store.getState().setDraftField('url', 'https://example.com/deep/link?x=1');
+    store.getState().commitPayload();
     store.getState().setSculpture('portal');
     store.getState().setTheme('snow');
 
     const link = store.getState().shareUrl('https://voxelqr.example/');
     const restored = createExperienceStore(new URL(link).search);
-    expect(restored.getState().url).toBe('https://example.com/deep/link?x=1');
+    expect(restored.getState().value).toBe('https://example.com/deep/link?x=1');
     expect(restored.getState().sculpture).toBe('portal');
     expect(restored.getState().theme).toBe('snow');
   });
@@ -87,11 +93,15 @@ describe('experience store', () => {
     // the wild: they must open on the default theme, not break.
     const legacy = buildShareUrl('https://voxelqr.example/', {
       url: 'https://example.com/old',
+      kind: 'url',
+      f: { url: 'https://example.com/old' },
       sculpture: 'portal',
       theme: 'brand' as never,
+      module: 'square',
+      corner: 'square',
     });
     const store = createExperienceStore(new URL(legacy).search);
-    expect(store.getState().url).toBe('https://example.com/old');
+    expect(store.getState().value).toBe('https://example.com/old');
     expect(store.getState().theme).toBe('nature');
   });
 

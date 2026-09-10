@@ -25,6 +25,10 @@ describe('FallbackQr', () => {
         foreground="#111111"
         background="#ffffff"
         reason="No WebGL here."
+        description="https://example.com/fallback"
+        moduleShape="square"
+        cornerShape="square"
+        logo={null}
       />,
     );
     expect(screen.getByRole('img', { name: /https:\/\/example\.com\/fallback/ })).toBeVisible();

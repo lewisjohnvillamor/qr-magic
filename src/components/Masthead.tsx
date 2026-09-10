@@ -19,6 +19,9 @@ export interface MastheadProps {
   /** Credit for whichever track is playing, as required by its licence. */
   musicCredit: string;
   weather: Weather | null;
+  /** Opens the code settings drawer. Absent in viewer and embed modes. */
+  onOpenConfig?: () => void;
+  configOpen?: boolean;
 }
 
 /**
@@ -30,7 +33,15 @@ export interface MastheadProps {
  * it is, so the useful thing to tell them is that it can be made theirs — and
  * where to go to ask for that, or to say thanks.
  */
-export function Masthead({ dimmed, muted, onToggleMuted, musicCredit, weather }: MastheadProps) {
+export function Masthead({
+  dimmed,
+  muted,
+  onToggleMuted,
+  musicCredit,
+  weather,
+  onOpenConfig,
+  configOpen,
+}: MastheadProps) {
   return (
     <header className="masthead" data-dimmed={dimmed ? 'true' : 'false'}>
       <div className="masthead-brand">
@@ -61,6 +72,17 @@ export function Masthead({ dimmed, muted, onToggleMuted, musicCredit, weather }:
           pressed={!muted}
           className="masthead-action"
         />
+        {onOpenConfig ? (
+          <IconButton
+            icon="settings"
+            label="Code settings"
+            title="Type, module and corner shapes, centre logo"
+            onClick={onOpenConfig}
+            pressed={configOpen}
+            className="masthead-action"
+            testId="open-config"
+          />
+        ) : null}
       </div>
     </header>
   );

@@ -2,6 +2,8 @@ import type { FormEvent } from 'react';
 import { ChipGroup } from './ChipGroup';
 import { ScanCue } from './ScanCue';
 import { ShareActions } from './ShareActions';
+import { PAYLOAD_TYPES } from '../../qr/payloads';
+import type { PayloadDraft, PayloadKind } from '../../qr/payloads';
 import { SCULPTURES } from '../../voxel/types';
 import type { SculptureId } from '../../voxel/types';
 import { THEME_IDS, THEMES } from '../../themes/themes';
@@ -9,14 +11,15 @@ import type { ThemeId } from '../../themes/themes';
 import type { Phase } from '../../app/experience-store';
 
 export interface ControlPanelProps {
-  draftUrl: string;
-  urlError: string | null;
-  urlIsDense: boolean;
+  payloadKind: PayloadKind;
+  draft: PayloadDraft;
+  valueError: string | null;
+  valueIsDense: boolean;
   sculpture: SculptureId;
   theme: ThemeId;
   phase: Phase;
-  onDraftUrlChange: (value: string) => void;
-  onSubmitUrl: () => void;
+  onDraftFieldChange: (key: string, value: string) => void;
+  onSubmit: () => void;
   onSculptureChange: (value: SculptureId) => void;
   onThemeChange: (value: ThemeId) => void;
   onShare: () => void;
@@ -37,20 +40,25 @@ const THEME_OPTIONS = THEME_IDS.map((id) => ({
 }));
 
 /**
- * The bottom stack: a card holding the link and its three icon actions, with
- * the sculpture and theme pickers as a footer beneath it.
+ * The bottom stack: a card holding the code's headline field and its three icon
+ * actions, with the sculpture and theme pickers as a footer beneath it.
+ *
+ * The field shown is whichever one *names* the current kind — the link, the
+ * network, the person. Everything else a kind needs lives in the settings
+ * drawer, so the card stays one line whether the code carries a URL or a whole
+ * contact card, and the sculpture keeps the screen.
  *
  * Reveal is not here — it lives on the scene itself, where the sculpture is
- * (spec §11). Everything that remains is either the one thing you type or a
- * quiet action you take afterwards, so the interface stops competing with the
- * thing it is presenting.
+ * (spec §11).
  */
 export function ControlPanel(props: ControlPanelProps) {
   const scanReady = props.phase === 'scan-ready';
+  const type = PAYLOAD_TYPES[props.payloadKind];
+  const primary = type.fields.find((field) => field.key === type.primary) ?? type.fields[0];
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
-    props.onSubmitUrl();
+    props.onSubmit();
   };
 
   const actions = (
@@ -84,12 +92,14 @@ export function ControlPanel(props: ControlPanelProps) {
    * under the field — so the disclosure moved to the moment it matters: the
    * Share button's tooltip, and the announcement made when a link is copied.
    */
-  const hintText = props.urlError
-    ? props.urlError
-    : props.urlIsDense
-      ? 'This link is long, so the code is dense. Scan from a little closer.'
+  const hintText = props.valueError
+    ? props.valueError
+    : props.valueIsDense
+      ? 'This one is long, so the code is dense. Scan from a little closer.'
       : null;
-  const hintTone = props.urlError ? 'error' : 'warn';
+  const hintTone = props.valueError ? 'error' : 'warn';
+
+  const extras = type.fields.length - 1;
 
   return (
     <div className="panel">
@@ -97,24 +107,31 @@ export function ControlPanel(props: ControlPanelProps) {
         <form className="field" onSubmit={handleSubmit} noValidate>
           {/* The placeholder says what this is; the label is kept for screen
               readers rather than spending a line of the card on it. */}
-          <label className="visually-hidden" htmlFor="destination-url">
-            Destination link
+          <label className="visually-hidden" htmlFor="payload-primary">
+            {primary?.label ?? 'Destination link'}
           </label>
           <input
-            id="destination-url"
+            id="payload-primary"
             className="url-input"
-            type="url"
-            inputMode="url"
-            autoComplete="url"
+            type="text"
+            inputMode={primary?.inputMode}
             spellCheck={false}
-            placeholder="Paste a link — example.com/your-page"
-            value={props.draftUrl}
-            aria-invalid={props.urlError ? 'true' : 'false'}
+            maxLength={primary?.maxLength}
+            placeholder={
+              props.payloadKind === 'url'
+                ? 'Paste a link — example.com/your-page'
+                : `${primary?.label ?? ''}${primary?.placeholder ? ` — ${primary.placeholder}` : ''}`
+            }
+            value={props.draft[primary?.key ?? 'url'] ?? ''}
+            aria-invalid={props.valueError ? 'true' : 'false'}
             {...(hintText ? { 'aria-describedby': 'url-hint' } : {})}
-            onChange={(event) => props.onDraftUrlChange(event.target.value)}
-            onBlur={props.onSubmitUrl}
+            onChange={(event) =>
+              props.onDraftFieldChange(primary?.key ?? 'url', event.target.value)
+            }
+            onBlur={props.onSubmit}
+            data-testid="payload-input"
           />
-          {/* Enter in the field commits the link. */}
+          {/* Enter in the field commits the code. */}
           <button type="submit" className="visually-hidden">
             Update code
           </button>
@@ -124,12 +141,20 @@ export function ControlPanel(props: ControlPanelProps) {
 
       {hintText ? (
         <p className="hint" id="url-hint" data-tone={hintTone}>
-          {props.urlError ? (
+          {props.valueError ? (
             <span className="hint-icon" aria-hidden="true">
               ⚠
             </span>
           ) : null}
           {hintText}
+        </p>
+      ) : null}
+
+      {/* A kind with more to say points at where the rest of it lives, rather
+          than growing the card to hold six fields nobody asked to see yet. */}
+      {extras > 0 ? (
+        <p className="hint" data-tone="quiet">
+          {type.label} details are in code settings, top right.
         </p>
       ) : null}
 

@@ -7,14 +7,15 @@ import type { ControlPanelProps } from '../../src/components/controls/ControlPan
 
 function setup(overrides: Partial<ControlPanelProps> = {}) {
   const props: ControlPanelProps = {
-    draftUrl: 'https://example.com/',
-    urlError: null,
-    urlIsDense: false,
+    payloadKind: 'url',
+    draft: { url: 'https://example.com/' },
+    valueError: null,
+    valueIsDense: false,
     sculpture: 'crystal',
     theme: 'nature',
     phase: 'sculpture',
-    onDraftUrlChange: vi.fn(),
-    onSubmitUrl: vi.fn(),
+    onDraftFieldChange: vi.fn(),
+    onSubmit: vi.fn(),
     onSculptureChange: vi.fn(),
     onThemeChange: vi.fn(),
     onShare: vi.fn(),
@@ -38,14 +39,14 @@ describe('ControlPanel', () => {
   });
 
   it('marks the invalid field and shows the message without relying on colour', async () => {
-    setup({ urlError: 'That link is missing a valid domain name.' });
+    setup({ valueError: 'That link is missing a valid domain name.' });
     const input = screen.getByLabelText('Destination link');
     expect(input).toHaveAttribute('aria-invalid', 'true');
     expect(screen.getByText('That link is missing a valid domain name.')).toBeInTheDocument();
   });
 
   it('warns about dense codes', () => {
-    setup({ urlIsDense: true });
+    setup({ valueIsDense: true });
     expect(screen.getByText(/code is dense/i)).toBeInTheDocument();
   });
 
@@ -54,7 +55,7 @@ describe('ControlPanel', () => {
     const props = setup();
     await user.click(screen.getByLabelText('Destination link'));
     await user.keyboard('{Enter}');
-    expect(props.onSubmitUrl).toHaveBeenCalled();
+    expect(props.onSubmit).toHaveBeenCalled();
   });
 
   it('moves between chips with the arrow keys', async () => {
@@ -87,7 +88,7 @@ describe('ControlPanel', () => {
   });
 
   it('describes the field only while there is a message to point at', () => {
-    setup({ urlIsDense: true });
+    setup({ valueIsDense: true });
     expect(screen.getByLabelText('Destination link')).toHaveAttribute(
       'aria-describedby',
       'url-hint',

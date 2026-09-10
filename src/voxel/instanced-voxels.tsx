@@ -5,6 +5,8 @@ import * as THREE from 'three';
 import type { RevealValues } from '../animation/create-reveal-timeline';
 import { LOCK_HEIGHT, TILE_HEIGHT } from './build-qr-layout';
 import { hashString } from './rng';
+import { createVoxelGeometry } from './module-geometry';
+import type { ShapeId } from '../qr/shapes';
 import type { VoxelLayout } from './types';
 
 /**
@@ -29,6 +31,10 @@ export interface InstancedVoxelsProps {
   castShadow: boolean;
   /** Wind multiplier on the idle motion; 1 is still air. */
   sway?: number;
+  /** Shape of every voxel except the three finder squares. */
+  moduleShape: ShapeId;
+  /** Shape of the finder-square voxels, which get their own mesh. */
+  cornerShape: ShapeId;
 }
 
 function smoothstep(t: number): number {
@@ -52,8 +58,11 @@ export function InstancedVoxels({
   pointer,
   castShadow,
   sway = 1,
+  moduleShape,
+  cornerShape,
 }: InstancedVoxelsProps) {
-  const meshRef = useRef<THREE.InstancedMesh>(null);
+  const mainRef = useRef<THREE.InstancedMesh>(null);
+  const cornerRef = useRef<THREE.InstancedMesh>(null);
   const groupRef = useRef<THREE.Group>(null);
   const flatUniform = useRef({ value: 0 });
   const clockRef = useRef(0);
@@ -67,15 +76,33 @@ export function InstancedVoxels({
 
   const count = layout.instances.length;
 
-  const geometry = useMemo(() => {
-    const box = new THREE.BoxGeometry(1, 1, 1);
-    // `vertexColors` needs a colour attribute to multiply into; ones keep the
-    // per-instance colour authoritative.
-    const vertexCount = box.attributes.position?.count ?? 0;
-    const colors = new Float32Array(vertexCount * 3).fill(1);
-    box.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-    return box;
-  }, []);
+  /**
+   * Which mesh each voxel lives in, and where in it.
+   *
+   * The finder squares can be a different shape from everything else, and a
+   * single `InstancedMesh` has exactly one geometry — so the corners get a mesh
+   * of their own. Two draw calls instead of one, and the split is precomputed
+   * into flat typed arrays so the frame loop pays a lookup, not a branch on
+   * object fields.
+   */
+  const partition = useMemo(() => {
+    const group = new Uint8Array(count);
+    const slot = new Int32Array(count);
+    let main = 0;
+    let corner = 0;
+    for (let i = 0; i < count; i += 1) {
+      const instance = layout.instances[i];
+      const isCorner = Boolean(instance?.isQrModule && instance.isFinder);
+      group[i] = isCorner ? 1 : 0;
+      slot[i] = isCorner ? corner : main;
+      if (isCorner) corner += 1;
+      else main += 1;
+    }
+    return { group, slot, mainCount: main, cornerCount: corner };
+  }, [layout, count]);
+
+  const mainGeometry = useMemo(() => createVoxelGeometry(moduleShape), [moduleShape]);
+  const cornerGeometry = useMemo(() => createVoxelGeometry(cornerShape), [cornerShape]);
 
   const material = useMemo(() => {
     const standard = new THREE.MeshStandardMaterial({
@@ -105,7 +132,8 @@ export function InstancedVoxels({
     return standard;
   }, []);
 
-  useEffect(() => () => geometry.dispose(), [geometry]);
+  useEffect(() => () => mainGeometry.dispose(), [mainGeometry]);
+  useEffect(() => () => cornerGeometry.dispose(), [cornerGeometry]);
   useEffect(() => () => material.dispose(), [material]);
 
   // Scratch objects, allocated once.
@@ -171,10 +199,14 @@ export function InstancedVoxels({
   // Seed matrices and colours synchronously so the first painted frame is the
   // finished plinth-and-sculpture rather than a pile of cubes at the origin.
   useLayoutEffect(() => {
-    const mesh = meshRef.current;
-    if (!mesh) return;
-    mesh.count = count;
+    const main = mainRef.current;
+    const corner = cornerRef.current;
+    if (!main || !corner) return;
+    main.count = partition.mainCount;
+    corner.count = partition.cornerCount;
     for (let i = 0; i < count; i += 1) {
+      const mesh = partition.group[i] === 1 ? corner : main;
+      const slot = partition.slot[i] ?? 0;
       const instance = layout.instances[i];
       if (!instance) continue;
       scratch.position.set(...instance.sculpturePosition);
@@ -191,26 +223,53 @@ export function InstancedVoxels({
         scratch.scale.setScalar(instance.sculptureScale);
       }
       scratch.matrix.compose(scratch.position, scratch.quaternion, scratch.scale);
-      mesh.setMatrixAt(i, scratch.matrix);
+      mesh.setMatrixAt(slot, scratch.matrix);
       const idleTile = tileColors.idle[i];
       if (idleTile) {
-        mesh.setColorAt(i, idleTile);
+        mesh.setColorAt(slot, idleTile);
       } else {
         const color = instance.isQrModule
           ? foregroundColor
           : paletteColors[instance.colorIndex % paletteColors.length];
-        if (color) mesh.setColorAt(i, color);
+        if (color) mesh.setColorAt(slot, color);
       }
     }
-    mesh.instanceMatrix.needsUpdate = true;
-    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-  }, [count, layout, paletteColors, foregroundColor, tileColors, scratch]);
+    for (const mesh of [main, corner]) {
+      mesh.instanceMatrix.needsUpdate = true;
+      if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+    }
+    /**
+     * Force the frame loop to write again.
+     *
+     * The loop skips the per-instance pass while the reveal values are
+     * unchanged, which is what makes the idle state free. After a reseed those
+     * values can be identical to the ones already recorded while the buffer
+     * underneath them is brand new — changing a shape rebuilds the mesh — and
+     * the loop would then leave every voxel in the resting pose this effect
+     * just wrote. Mid-reveal that is a stutter; at lock it is three finder
+     * squares standing back up on top of a code someone is scanning.
+     */
+    written.current = { morph: -1, scatter: -1, lock: -1, squash: -1 };
+    // Both geometries are dependencies: swapping a shape rebuilds the mesh, and
+    // a fresh `InstancedMesh` starts with an empty matrix buffer.
+  }, [
+    count,
+    layout,
+    partition,
+    paletteColors,
+    foregroundColor,
+    tileColors,
+    scratch,
+    mainGeometry,
+    cornerGeometry,
+  ]);
 
   useFrame((_state, delta) => {
-    const mesh = meshRef.current;
+    const main = mainRef.current;
+    const corner = cornerRef.current;
     const group = groupRef.current;
     const reveal = values.current;
-    if (!mesh || !group || !reveal) return;
+    if (!main || !corner || !group || !reveal) return;
 
     const time = (clockRef.current += delta);
     const { morph, scatter, lock, idle, squash } = reveal;
@@ -248,6 +307,8 @@ export function InstancedVoxels({
     for (let i = 0; i < count; i += 1) {
       const instance = layout.instances[i];
       if (!instance) continue;
+      const mesh = partition.group[i] === 1 ? corner : main;
+      const slot = partition.slot[i] ?? 0;
 
       const start = instance.delay * STAGGER_WINDOW;
       const raw = (morph - start) / (1 - start);
@@ -284,7 +345,7 @@ export function InstancedVoxels({
         const scanColor = tileColors.scan[i];
         if (idleColor && scanColor) {
           scratchColor.copy(idleColor).lerp(scanColor, local);
-          mesh.setColorAt(i, scratchColor);
+          mesh.setColorAt(slot, scratchColor);
         }
       } else {
         // Sculpture cubes lift with the scatter, then dive into the base and
@@ -312,18 +373,29 @@ export function InstancedVoxels({
       }
 
       scratch.matrix.compose(scratch.position, scratch.quaternion, scratch.scale);
-      mesh.setMatrixAt(i, scratch.matrix);
+      mesh.setMatrixAt(slot, scratch.matrix);
     }
 
-    mesh.instanceMatrix.needsUpdate = true;
-    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+    for (const mesh of [main, corner]) {
+      mesh.instanceMatrix.needsUpdate = true;
+      if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+    }
   });
 
   return (
     <group ref={groupRef}>
       <instancedMesh
-        ref={meshRef}
-        args={[geometry, material, Math.max(count, 1)]}
+        key={moduleShape}
+        ref={mainRef}
+        args={[mainGeometry, material, Math.max(partition.mainCount, 1)]}
+        castShadow={castShadow}
+        receiveShadow={castShadow}
+        frustumCulled={false}
+      />
+      <instancedMesh
+        key={`corner:${cornerShape}`}
+        ref={cornerRef}
+        args={[cornerGeometry, material, Math.max(partition.cornerCount, 1)]}
         castShadow={castShadow}
         receiveShadow={castShadow}
         frustumCulled={false}

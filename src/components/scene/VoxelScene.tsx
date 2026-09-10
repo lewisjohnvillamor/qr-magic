@@ -7,6 +7,7 @@ import type { SculptureId } from '../../voxel/types';
 import type { Theme } from '../../themes/themes';
 import type { QualityProfile } from '../../lib/quality';
 import type { RevealValues } from '../../animation/create-reveal-timeline';
+import type { ShapeId } from '../../qr/shapes';
 import { buildQrLayout } from '../../voxel/build-qr-layout';
 import { hashString } from '../../voxel/rng';
 import { buildModuleRamp, moduleColorAt } from '../../themes/module-colors';
@@ -36,6 +37,20 @@ export interface VoxelSceneProps {
   active: boolean;
   /** Live conditions where the viewer is, or null when unavailable. */
   weather: Weather | null;
+  /** Shape of an ordinary module, in both the voxels and the scan surface. */
+  moduleShape: ShapeId;
+  /** Shape of the three finder squares, in both. */
+  cornerShape: ShapeId;
+  /**
+   * Decoded centre logo, or null.
+   *
+   * It is drawn into the canonical texture rather than added to the scene as
+   * geometry. That keeps the scan surface a single exact image — the invariant
+   * the whole reveal is built around — and it leaves the voxel morph completely
+   * untouched: the tiles still grow, swell and shrink away exactly as before,
+   * and the logo simply arrives with the plane they hand the code over to.
+   */
+  logo: HTMLImageElement | null;
 }
 
 /** The grey every condition washes toward: a flat, colourless overcast. */
@@ -90,6 +105,9 @@ function SceneContents({
   scanInset,
   values,
   weather,
+  moduleShape,
+  cornerShape,
+  logo,
   pointer,
 }: VoxelSceneProps & { pointer: RefObject<{ x: number; y: number }> }) {
   const grade = useMemo(() => gradeFor(weather), [weather]);
@@ -169,6 +187,9 @@ function SceneContents({
         background={qrBackground}
         moduleColor={moduleColor}
         values={values}
+        moduleShape={moduleShape}
+        cornerShape={cornerShape}
+        logo={logo}
       />
 
       <InstancedVoxels
@@ -181,6 +202,8 @@ function SceneContents({
         pointer={pointer}
         castShadow={quality.shadows}
         sway={grade.sway}
+        moduleShape={moduleShape}
+        cornerShape={cornerShape}
       />
 
       <Particles

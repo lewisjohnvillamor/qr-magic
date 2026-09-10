@@ -11,21 +11,26 @@ import {
 
 const payload = {
   url: 'https://example.com/campaign',
+  kind: 'url' as const,
+  f: { url: 'https://example.com/campaign' },
   sculpture: 'crystal' as const,
   theme: 'cyber' as const,
+  module: 'square' as const,
+  corner: 'square' as const,
 };
 
 describe('share codec', () => {
   it('round-trips a payload', () => {
     const decoded = decodeExperience(encodeExperience(payload));
     expect(decoded.ok).toBe(true);
-    expect(decoded.ok && decoded.payload).toMatchObject({ ...payload, v: 1 });
+    expect(decoded.ok && decoded.payload).toMatchObject({ ...payload, v: 2 });
   });
 
   it('produces URL-safe output', () => {
     const encoded = encodeExperience({
       ...payload,
       url: 'https://example.com/?q=a+b/c&d=e~f',
+      f: { url: 'https://example.com/?q=a+b/c&d=e~f' },
     });
     expect(encoded).not.toMatch(/[+/=]/);
   });
@@ -106,6 +111,9 @@ describe('share codec', () => {
     );
     const decoded = decodeExperience(extra);
     expect(decoded.ok && Object.keys(decoded.payload).sort()).toEqual([
+      'corner',
+      'kind',
+      'module',
       'sculpture',
       'theme',
       'url',
