@@ -109,3 +109,35 @@ test.describe('scan-ready on a phone', () => {
     });
   }
 });
+
+test.describe('desktop reach', () => {
+  test.use({ viewport: { width: 1280, height: 800 } });
+
+  test('every sculpture is reachable with a mouse', async ({ page }) => {
+    // The footer rows are a horizontal scroller with the scrollbar hidden,
+    // which works for a thumb and not at all for a mouse: at 1280px the
+    // sculpture row overflowed by nearly 200px, putting its last options out of
+    // reach of every pointer device. On a fine pointer the rows wrap instead.
+    await page.goto(experienceUrl({ url: LINK }));
+    await page.getByTestId('phase').waitFor({ state: 'attached' });
+
+    const rows = await page.evaluate(() =>
+      Array.from(document.querySelectorAll('.panel-footer .chips')).map((row) => ({
+        label: row.getAttribute('aria-label'),
+        clipped: row.scrollWidth - row.clientWidth,
+      })),
+    );
+
+    expect(rows.length).toBe(2);
+    for (const row of rows) {
+      expect(row.clipped, `${row.label} has options scrolled out of reach`).toBeLessThanOrEqual(0);
+    }
+
+    // And the last one is actually clickable where it says it is. Matched
+    // loosely because selecting a chip adds a check glyph to its own
+    // accessible name.
+    const brand = page.getByRole('radio', { name: /Brand/ });
+    await brand.click();
+    await expect(brand).toHaveAttribute('aria-checked', 'true');
+  });
+});

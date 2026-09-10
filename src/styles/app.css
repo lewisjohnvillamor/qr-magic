@@ -470,6 +470,58 @@ body {
   display: none;
 }
 
+/**
+ * Wrapped chips: every option on screen, no scroller at all.
+ *
+ * A hidden scrollbar is an affordance only a finger has. A mouse cannot pan a
+ * horizontal row — a wheel scrolls the page, not the row — so on a pointer
+ * device the options past the fade were simply unreachable, and the faded edge
+ * read as broken padding rather than as "there is more this way". Where the
+ * options fit on two short lines, they belong on two short lines.
+ */
+.chips[data-wrap='true'] {
+  flex-wrap: wrap;
+  overflow-x: visible;
+  row-gap: var(--space-2);
+  padding: 2px;
+  -webkit-mask-image: none;
+  mask-image: none;
+  scroll-snap-type: none;
+  touch-action: auto;
+}
+
+/* Equal columns, for a small set of peers that would otherwise break unevenly. */
+.chips[data-columns='true'] {
+  display: grid;
+  grid-template-columns: repeat(var(--chip-columns, 2), minmax(0, 1fr));
+}
+
+.chips[data-columns='true'] .chip {
+  justify-content: center;
+  padding: 0 0.6rem;
+}
+
+/**
+ * The same reasoning, applied by input device rather than by container.
+ *
+ * The footer rows are a deliberate scroller: on a phone they are one line the
+ * thumb sweeps through, and wrapping them would spend screen the sculpture
+ * needs. But a fine pointer cannot sweep, so on those devices they wrap too —
+ * the Sculpture row overflows a 1280px desktop, which put its last options out
+ * of reach of a mouse entirely.
+ */
+@media (hover: hover) and (pointer: fine) {
+  .chips {
+    flex-wrap: wrap;
+    overflow-x: visible;
+    row-gap: var(--space-2);
+    padding: 2px;
+    -webkit-mask-image: none;
+    mask-image: none;
+    scroll-snap-type: none;
+  }
+}
+
 .chip {
   flex: 0 0 auto;
   display: inline-flex;
@@ -922,5 +974,15 @@ textarea.field-control {
   .drawer {
     width: 100vw;
     border-left: 0;
+  }
+}
+
+/* Wider than a phone the drawer sits beside the page rather than over it, so
+   the panel gives up the width instead of running underneath. Without this the
+   footer's last chips sit under the drawer, which reads as options that have
+   been cut off rather than covered. */
+@media (min-width: 30.0625rem) {
+  .app[data-drawer='open'] .panel {
+    padding-right: calc(23rem + var(--space-4));
   }
 }
