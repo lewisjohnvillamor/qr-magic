@@ -48,6 +48,46 @@ The scan-ready image above is a real, working code — it decodes to
 Every layout is seeded from what the code encodes, so the same input always
 produces the same sculpture.
 
+## What a code can be, and what it can look like
+
+The settings drawer opens from the gear in the top right. It holds what the
+code carries, the shape of its modules and finder rings, and the logo.
+
+![The code settings drawer, open beside the sculpture](docs/media/config-drawer.jpg)
+
+| Type        | What a phone does with it        |
+| ----------- | -------------------------------- |
+| **Link**    | Opens a web address              |
+| **Text**    | Shows a plain message            |
+| **Wi-Fi**   | Joins the network                |
+| **Contact** | Saves a contact card (vCard 3.0) |
+| **Email**   | Opens a pre-filled message       |
+| **SMS**     | Opens a pre-filled text          |
+| **Phone**   | Starts a call                    |
+
+Modules and finder rings can each be square, semi-round, round or dots — and
+the shape applies to the voxels and to the finished code alike, so choosing one
+changes what you watch as well as what you scan.
+
+| Square                                                     | Semi-round                                                   |
+| ---------------------------------------------------------- | ------------------------------------------------------------ |
+| ![Square modules and corners](docs/media/shape-square.png) | ![Semi-round modules and corners](docs/media/shape-semi.png) |
+
+| Round                                                    | Dots                                                           |
+| -------------------------------------------------------- | -------------------------------------------------------------- |
+| ![Round modules and corners](docs/media/shape-round.png) | ![Dot modules and circular corners](docs/media/shape-dots.png) |
+
+A logo can sit in the middle. Adding one switches to the strongest error
+correction, and the covered area is capped at roughly 5% of the code:
+
+![A code with a monogram in the middle](docs/media/shape-logo.png)
+
+All five of those are real, working codes. They decode to
+`https://voxelqr.example/hello`, and they are captured from the running app by
+the same Playwright harness that decodes them — the logo in the last one is the
+same picture the logo decode test uses, so the README cannot show a code nobody
+verified.
+
 ## Anywhere it needs to go
 
 | Embeddable widget                                        | On a phone                                  |
@@ -84,20 +124,25 @@ Playwright web server do it via `npm run preview`.
 ```
 React UI  ──►  experience store (validated state)
                  │
-                 ├──►  src/qr/        normalize-url → generate-matrix (boolean module matrix)
+                 ├──►  src/qr/        payloads (link, Wi-Fi, vCard, …) → encoded string
+                 │                    build-matrix (error-correction floor) → generate-matrix
+                 │                    shapes (one vocabulary, two renderers) + logo
                  ├──►  src/sharing/   zod schema → base64url codec (?experience=)
                  └──►  src/themes/    palette + contrast guarantee
                           │
               src/voxel/  build-qr-layout + build-sculpture-layout → VoxelInstance[]
+                          module-geometry: the same shape, as geometry
                           │
           src/animation/  one reversible master timeline → progress 0..1
                           │
-   src/components/scene/  InstancedMesh (one draw call) + scan-safe backing plane
+   src/components/scene/  InstancedMesh per shape + scan-safe backing plane
 ```
 
 Each module owns one thing. The QR engine does not know what a voxel is; the
 scene renders but never holds application state; the timeline animates but never
-validates a URL. Nothing calls `setState` during the animation loop — the frame
+validates a URL. `src/qr/shapes.ts` is the clearest case: it is a vocabulary and
+nothing else, so neither renderer owns the other — the canvas turns a shape into
+a path and `src/voxel/module-geometry.ts` turns the same shape into geometry. Nothing calls `setState` during the animation loop — the frame
 loop writes matrices into a single `InstancedMesh`.
 
 ### Why the code actually scans
@@ -239,9 +284,12 @@ gesture is pressing the sculpture, but that target is a real `<button>` with an
 accessible name, reachable by keyboard and announced by screen readers — the
 gesture is the styling, not the mechanism. The icon actions (share, embed, save)
 carry `aria-label` and a hover tooltip, so nothing depends on recognising a
-glyph; the sculpture and theme pickers are arrow-key radio groups; and URL
-errors and the scan-ready state are announced through a polite live region.
-State is never signalled by colour alone.
+glyph; the sculpture, theme, payload-type and shape pickers are all arrow-key
+radio groups; and validation errors, the scan-ready state and every change made
+in the settings drawer — including the one that raises error correction — are
+announced through a polite live region. The drawer is a labelled dialog that
+takes focus when it opens and closes on Escape. State is never signalled by
+colour alone.
 With `prefers-reduced-motion` the scatter choreography is replaced by a short
 interpolation and idle rotation stops, with no loss of function.
 
@@ -263,13 +311,24 @@ for the device:
 
 ## Security and privacy
 
-QR generation is local, only `http:` and `https:` destinations are accepted (up
-to 1,200 characters), unsafe schemes are rejected on entry _and_ again when a
-share link is decoded, and the app never navigates to a user-entered URL. No
-analytics, and exactly one third-party request: the weather lookup described
+QR generation is local. Every payload is built by one of this app's own
+encoders and capped at 1,200 characters; on the **Link** kind only `http:` and
+`https:` are accepted, unsafe schemes are rejected on entry _and_ again when a
+share link is decoded, and the app never navigates to a user-entered address. A
+decoded share link is re-encoded from its own fields rather than trusted, so a
+hand-edited payload cannot smuggle in a string these encoders would never have
+produced.
+
+**A logo never leaves the device.** The picked file is decoded, scaled down and
+re-encoded as a PNG in the browser — which also means the canvas the code is
+drawn on is never tainted by a foreign image, so the "save as image" export
+cannot fail at the moment someone reaches for it. SVG is refused for the same
+reason: it can reference external resources. The logo is not in the share link.
+
+No analytics, and exactly one third-party request: the weather lookup described
 below, which is sent a pair of coordinates and nothing else. An end-to-end test
-asserts that `api.open-meteo.com` is the only host ever contacted and that the
-destination URL is never transmitted — to it or to anyone. A restrictive CSP
+asserts that `api.open-meteo.com` is the only host ever contacted and that what
+the code carries is never transmitted — to it or to anyone. A restrictive CSP
 ships with the dev server, the preview server, `public/_headers` and
 `vercel.json`, and `connect-src` names that single host.
 
@@ -358,8 +417,10 @@ readout in the corner names what was applied and discloses the lookup.
 
 ## Performance
 
-The scene is drawn in ≤4 draw calls (one `InstancedMesh` for every cube, the
-base plane, one particle cloud), no allocation happens inside the frame loop,
+The scene is drawn in ≤5 draw calls (two `InstancedMesh`es for every cube — the
+finder squares can be a different shape from everything else, and one mesh has
+one geometry — plus the base plane and one particle cloud), no allocation
+happens inside the frame loop,
 and while the scene is idle the per-instance loop is skipped entirely — the
 idle animation is carried by a single group transform, so a resting embed costs
 almost no CPU. Rendering pauses when the tab is hidden or the iframe is

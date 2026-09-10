@@ -1,24 +1,9 @@
 import { expect, test } from '@playwright/test';
 import { decodeQrFromPng } from './decode';
 import { experienceUrl, revealAndSettle, screenshotScene } from './helpers';
+import { LOGO_PNG } from './fixtures';
 
 const URL_VALUE = 'https://voxelqr.example/logo';
-
-/**
- * A 64x64 solid magenta PNG.
- *
- * Deliberately opaque and saturated: a logo that shares the code's own colours
- * would let a failure hide, whereas this one is unmistakably not a module, so
- * anything wrong with the pad or the placement shows up as a decode failure
- * rather than a slightly odd-looking centre.
- */
-const LOGO_PNG = Buffer.from(
-  'iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAAAeklEQVR4nO3PUQkAIBTAwBfD7KYz' +
-    'iiH8OITBAtzmrP11wwUNaEEDWtCAFjSgBQ1oQQNa0IAWNKAFDWhBA1rQgBY0oAUNaEEDWtCAFjSg' +
-    'BQ1oQQNa0IAWNKAFDWhBA1rQgBY0oAUNaEEDWtCAFjSgBQ1oQQNa0IAWPHYBFrQheLEzsqYAAAAA' +
-    'SUVORK5CYII=',
-  'base64',
-);
 
 /**
  * A logo covers modules, which is only safe because error correction pays for
