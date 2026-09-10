@@ -1,6 +1,7 @@
 # VoxelQR
 
-**Turn any link into a living 3D voxel sculpture that transforms into a QR code.**
+**Turn any link, network, contact or message into a living 3D voxel sculpture
+that transforms into a QR code.**
 
 By **Lewis John Villamor**
 
@@ -16,8 +17,15 @@ sculpture and the camera tilts to a perfect top-down view while the code grows
 out of the ground and the sculpture is absorbed into it. Press the code and the
 same timeline runs backwards — one surface, one gesture, both directions.
 
+A code can carry a **link, plain text, a Wi-Fi network, a contact card, an
+email, an SMS or a phone number**. Its modules and its corner rings can be
+**square, semi-round, round or dots** — and the shape applies to the voxels and
+to the finished code alike, so choosing one changes what you watch as well as
+what you scan. A **logo** can sit in the middle. All of it lives in the settings
+drawer, top right.
+
 Everything happens in the browser. There is no backend, no database, no account,
-and the destination link is never sent anywhere.
+and what the code carries is never sent anywhere.
 
 ## The transformation
 
@@ -37,7 +45,7 @@ The scan-ready image above is a real, working code — it decodes to
 | ![Gift box, Sunset theme](docs/media/sculpture-gift-sunset.jpg) | ![Abstract portal, Snow theme](docs/media/sculpture-portal-snow.jpg) | ![The LV monogram, Sunset theme](docs/media/sculpture-brand-monogram.jpg) |
 | **Gift box** · Sunset                                           | **Abstract portal** · Snow                                           | **Brand** · Sunset                                                        |
 
-Every layout is seeded from the destination URL, so the same link always
+Every layout is seeded from what the code encodes, so the same input always
 produces the same sculpture.
 
 ## Anywhere it needs to go
@@ -113,7 +121,36 @@ the darker colour as the foreground, for every theme.
 And it is a build gate: `tests/e2e/qr-decode.spec.ts` screenshots the live WebGL
 canvas in its scan-ready state and decodes it with ZXing across six viewports and
 pixel densities, every theme, every sculpture, short and long URLs, and
-reduced-motion mode. A code that will not decode fails CI.
+reduced-motion mode. `tests/e2e/shapes-decode.spec.ts` does the same for every
+module shape, every corner shape, the softest combination of the two, and every
+payload kind; `tests/e2e/logo-decode.spec.ts` covers a code with a logo in it. A
+code that will not decode fails CI.
+
+Those matrices are driven from the product's own lists, so a new shape or a new
+payload kind cannot ship without a decode test covering it — and they earn their
+keep. The first run found that dotted modules were being drawn over the finder
+rings, which destroys the 1:1:3:1:1 ratio a detector scans for: the code stopped
+decoding entirely while still looking, to the eye, like a perfectly good QR.
+
+### Shapes and logos, and what they cost
+
+Both are ways of throwing dark area away, so both are paid for in error
+correction rather than hoped for:
+
+- **Round and semi-round** round only the corners a module does _not_ share with
+  a dark neighbour, so a run of modules stays one solid bar — the thing a
+  decoder actually samples. They cost nothing in redundancy.
+- **Dots** detach every module, so a dotted code is pinned to level `Q` and
+  never steps down the ladder for size.
+- **A logo** pins the code to level `H` — 30% recovery — against a covered area
+  capped at roughly 5%, quiet pad included. It is drawn into the canonical
+  texture rather than added to the scene, so the scan surface stays a single
+  exact image and the voxel morph is untouched: the tiles grow, swell and shrink
+  away exactly as before, and the logo arrives with the plane they hand the code
+  over to.
+- **Finder rings** are drawn whole — as one shape rather than 33 modules —
+  whenever anything is shaped, whatever the corner shape is set to. That is what
+  keeps the detection ratio exact at every radius, including the circle.
 
 ### Scanning headroom, measured
 
@@ -155,7 +192,8 @@ capture size, guarded by its own test.
 ## Sharing
 
 **A share link carries the whole 3D experience, not a picture of a code.** The
-payload holds the destination plus the sculpture and theme, so whoever opens it
+payload holds what the code encodes plus the sculpture, theme and the two
+shapes, so whoever opens it
 lands on the same sculpture and presses it themselves. If
 you want a flat image instead, that is what **Save image** is for.
 
@@ -172,14 +210,25 @@ receiving it, not editing it. The Share and Embed buttons add a `view=1` flag
 for exactly this; the address-bar sync never does, so your own page stays
 editable across reloads while the copy you hand out does not.
 
-The current destination and appearance are encoded into the address bar as a
+The current code and appearance are encoded into the address bar as a
 versioned, Base64URL-encoded JSON payload under `?experience=`, parsed with Zod on
-the way back in. Unknown fields are ignored, invalid sculptures and themes fall
-back to defaults, and an oversized or manipulated payload loads the default
-experience instead of breaking the page.
+the way back in. Unknown fields are ignored, anything the build no longer
+recognises falls back to a default, and an oversized or manipulated payload loads
+the default experience instead of breaking the page. Links written before payload
+kinds and shapes existed still open, on the defaults.
 
-**Share links contain the destination URL in plain sight.** It is encoded, not
-encrypted, and the interface says so.
+The payload also carries the fields the code was built from, and those are what a
+recipient's copy is re-encoded from — so the string a stranger's phone acts on is
+by construction one this app's own encoders produced, not one that was typed into
+a link. Only the fields the chosen kind actually uses travel: a Wi-Fi password
+left in the drawer while the code encodes a link never leaves the page.
+
+**A logo stays on the device that chose it.** It is not in the share link — a
+picture would not fit in an address bar — so a shared code arrives without it.
+
+**Share links contain what the code carries in plain sight.** It is encoded, not
+encrypted, and the interface says so. That includes a Wi-Fi password, which is
+worth knowing before handing one out.
 
 ---
 

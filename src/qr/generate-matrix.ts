@@ -53,6 +53,16 @@ export interface GenerateMatrixOptions {
   errorCorrectionLevel?: 'L' | 'M' | 'Q' | 'H';
   /** Override the step-down threshold; mainly for tests. */
   targetMaxModules?: number;
+  /**
+   * Floor the ladder is not allowed to step below.
+   *
+   * The ladder trades redundancy for a lower module count, which is the right
+   * trade for a clean, unobstructed code. It stops being the right trade the
+   * moment something is *taking modules away* — a logo over the middle, or a
+   * dotted module shape that erodes every module's corners. Those callers set
+   * a floor and accept the denser code that comes with it.
+   */
+  minimumErrorCorrectionLevel?: 'M' | 'Q' | 'H';
 }
 
 /**
@@ -64,9 +74,11 @@ export interface GenerateMatrixOptions {
 export function chooseErrorCorrectionLevel(
   value: string,
   targetMaxModules = TARGET_MAX_MODULES,
+  minimumLevel: 'M' | 'Q' | 'H' = 'M',
 ): 'M' | 'Q' | 'H' {
-  let fallback: 'M' | 'Q' | 'H' = ECC_LADDER[ECC_LADDER.length - 1] as 'M';
-  for (const level of ECC_LADDER) {
+  const rungs = ECC_LADDER.slice(0, ECC_LADDER.indexOf(minimumLevel) + 1);
+  let fallback: 'M' | 'Q' | 'H' = rungs[rungs.length - 1] ?? 'H';
+  for (const level of rungs) {
     const size = QRCode.create(value, { errorCorrectionLevel: level }).modules.size;
     fallback = level;
     if (size <= targetMaxModules) return level;
@@ -83,7 +95,12 @@ export function chooseErrorCorrectionLevel(
 export function generateMatrix(value: string, options: GenerateMatrixOptions = {}): QrMatrix {
   const quietZone = options.quietZone ?? DEFAULT_QUIET_ZONE;
   const errorCorrectionLevel =
-    options.errorCorrectionLevel ?? chooseErrorCorrectionLevel(value, options.targetMaxModules);
+    options.errorCorrectionLevel ??
+    chooseErrorCorrectionLevel(
+      value,
+      options.targetMaxModules,
+      options.minimumErrorCorrectionLevel,
+    );
 
   const created = QRCode.create(value, { errorCorrectionLevel });
   const size = created.modules.size;

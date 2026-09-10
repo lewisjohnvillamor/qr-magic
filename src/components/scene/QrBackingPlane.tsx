@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import type { QrMatrix } from '../../qr/generate-matrix';
 import { drawCanonicalQr } from '../../qr/draw-canonical';
 import type { RevealValues } from '../../animation/create-reveal-timeline';
+import type { ShapeId } from '../../qr/shapes';
 
 export interface QrBasePlaneProps {
   matrix: QrMatrix;
@@ -13,6 +14,10 @@ export interface QrBasePlaneProps {
   /** Per-module mosaic colour; must match the tiles exactly. */
   moduleColor: (row: number, column: number) => string;
   values: RefObject<RevealValues | null>;
+  moduleShape: ShapeId;
+  cornerShape: ShapeId;
+  /** Decoded centre logo, drawn into this texture and nowhere else. */
+  logo: HTMLImageElement | null;
 }
 
 /**
@@ -32,6 +37,9 @@ export function QrBasePlane({
   background,
   moduleColor,
   values,
+  moduleShape,
+  cornerShape,
+  logo,
 }: QrBasePlaneProps) {
   const meshRef = useRef<THREE.Mesh>(null);
 
@@ -39,9 +47,21 @@ export function QrBasePlane({
     const canvas = document.createElement('canvas');
     const context = canvas.getContext('2d');
     if (!context) return null;
-    // 12 device pixels per module keeps the texture crisp at any sensible
-    // on-screen size while staying well inside texture limits.
-    drawCanonicalQr(context, matrix, { foreground, background, moduleColor, modulePixels: 12 });
+    // 12 device pixels per module keeps a square code crisp at any sensible
+    // on-screen size while staying well inside texture limits. Curves and a
+    // logo are sampled with the same nearest filter — exactness at the module
+    // boundary is still the point — so they are given more pixels to be
+    // nearest-sampled from rather than a smoother filter.
+    const plain = moduleShape === 'square' && cornerShape === 'square' && !logo;
+    drawCanonicalQr(context, matrix, {
+      foreground,
+      background,
+      moduleColor,
+      modulePixels: plain ? 12 : 20,
+      moduleShape,
+      cornerShape,
+      logo: logo ? { image: logo } : null,
+    });
     const created = new THREE.CanvasTexture(canvas);
     created.magFilter = THREE.NearestFilter;
     created.minFilter = THREE.NearestFilter;
@@ -49,7 +69,7 @@ export function QrBasePlane({
     created.colorSpace = THREE.SRGBColorSpace;
     created.anisotropy = 1;
     return created;
-  }, [matrix, foreground, background, moduleColor]);
+  }, [matrix, foreground, background, moduleColor, moduleShape, cornerShape, logo]);
 
   useEffect(() => () => texture?.dispose(), [texture]);
 

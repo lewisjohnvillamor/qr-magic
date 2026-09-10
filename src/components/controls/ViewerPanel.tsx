@@ -3,8 +3,10 @@ import { ShareActions } from './ShareActions';
 import type { Phase } from '../../app/experience-store';
 
 export interface ViewerPanelProps {
-  /** Where the code points, shown so a recipient can see it before scanning. */
+  /** What the code carries, shown so a recipient can see it before scanning. */
   destination: string;
+  /** True when the destination is a web address and can be opened directly. */
+  isLink: boolean;
   phase: Phase;
   onShare: () => void;
   onEmbed: () => void;
@@ -32,9 +34,17 @@ export function ViewerPanel(props: ViewerPanelProps) {
             <strong>Shared with you</strong>
             {/* The destination is disclosed rather than hidden behind the
                 reveal: knowing where a stranger's code leads is the point. */}
-            <a className="viewer-destination" href={props.destination} rel="noreferrer noopener">
-              {props.destination}
-            </a>
+            {/* Only a web address is offered as a link. A Wi-Fi payload or a
+                contact card is disclosed as text — there is nothing safe or
+                useful to navigate to, and a link that does nothing is worse
+                than a line that simply says what this is. */}
+            {props.isLink ? (
+              <a className="viewer-destination" href={props.destination} rel="noreferrer noopener">
+                {props.destination}
+              </a>
+            ) : (
+              <span className="viewer-destination">{props.destination}</span>
+            )}
           </p>
         )}
         <span className="spacer" />

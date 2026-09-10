@@ -1,9 +1,16 @@
 import type { Page } from '@playwright/test';
 
 export interface ExperienceOptions {
+  /** The exact string the code should encode. */
   url: string;
   sculpture?: string;
   theme?: string;
+  /** Payload kind. Defaults to `url`. */
+  kind?: string;
+  /** Draft fields the value is re-encoded from on the way in. */
+  fields?: Record<string, string>;
+  module?: string;
+  corner?: string;
 }
 
 function toBase64Url(value: string): string {
@@ -17,11 +24,17 @@ function toBase64Url(value: string): string {
 /** Build the same share link the app produces, without going through the UI. */
 export function experienceUrl(options: ExperienceOptions): string {
   const payload: Record<string, unknown> = {
-    v: 1,
+    v: 2,
     url: options.url,
+    kind: options.kind ?? 'url',
     sculpture: options.sculpture ?? 'crystal',
     theme: options.theme ?? 'nature',
+    module: options.module ?? 'square',
+    corner: options.corner ?? 'square',
   };
+  // A non-URL kind is re-encoded from its fields on the way in, so a link that
+  // carries one has to carry them too — the same as a link the app writes.
+  if (options.fields) payload.f = options.fields;
   return `/?experience=${toBase64Url(JSON.stringify(payload))}`;
 }
 
