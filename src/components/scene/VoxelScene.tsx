@@ -3,12 +3,13 @@ import type { RefObject } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { QrMatrix } from '../../qr/generate-matrix';
-import type { SculptureId } from '../../voxel/types';
+import type { ActiveSculptureId } from '../../voxel/types';
 import type { Theme } from '../../themes/themes';
 import type { QualityProfile } from '../../lib/quality';
 import type { RevealValues } from '../../animation/create-reveal-timeline';
 import type { ShapeId } from '../../qr/shapes';
 import { buildQrLayout } from '../../voxel/build-qr-layout';
+import type { SculpturePoint } from '../../voxel/build-sculpture-layout';
 import { hashString } from '../../voxel/rng';
 import { buildModuleRamp, moduleColorAt } from '../../themes/module-colors';
 import { isProtectedModule } from '../../qr/generate-matrix';
@@ -23,7 +24,9 @@ import type { WeatherGrade } from '../../lib/weather-grading';
 
 export interface VoxelSceneProps {
   matrix: QrMatrix;
-  sculpture: SculptureId;
+  sculpture: ActiveSculptureId;
+  /** The sculpture built from an upload, when that is the one chosen. */
+  customPoints?: readonly SculpturePoint[] | null;
   theme: Theme;
   quality: QualityProfile;
   qrForeground: string;
@@ -108,6 +111,7 @@ function SceneContents({
   moduleShape,
   cornerShape,
   logo,
+  customPoints,
   pointer,
 }: VoxelSceneProps & { pointer: RefObject<{ x: number; y: number }> }) {
   const grade = useMemo(() => gradeFor(weather), [weather]);
@@ -118,8 +122,9 @@ function SceneContents({
         sculpture,
         sculptureCount: quality.sculptureCount,
         seed: hashString(`${matrix.value}:${sculpture}`),
+        customPoints,
       }),
-    [matrix, sculpture, quality.sculptureCount],
+    [matrix, sculpture, quality.sculptureCount, customPoints],
   );
 
   /** Highest point of the sculpture standing on the base. */

@@ -12,6 +12,7 @@ function setup(overrides: Partial<ControlPanelProps> = {}) {
     valueError: null,
     valueIsDense: false,
     sculpture: 'crystal',
+    customSculptureName: null,
     theme: 'nature',
     phase: 'sculpture',
     onDraftFieldChange: vi.fn(),

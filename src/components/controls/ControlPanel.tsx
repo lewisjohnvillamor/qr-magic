@@ -4,8 +4,8 @@ import { ScanCue } from './ScanCue';
 import { ShareActions } from './ShareActions';
 import { PAYLOAD_TYPES } from '../../qr/payloads';
 import type { PayloadDraft, PayloadKind } from '../../qr/payloads';
-import { SCULPTURES } from '../../voxel/types';
-import type { SculptureId } from '../../voxel/types';
+import { CUSTOM_SCULPTURE, SCULPTURES } from '../../voxel/types';
+import type { ActiveSculptureId } from '../../voxel/types';
 import { THEME_IDS, THEMES } from '../../themes/themes';
 import type { ThemeId } from '../../themes/themes';
 import type { Phase } from '../../app/experience-store';
@@ -15,23 +15,26 @@ export interface ControlPanelProps {
   draft: PayloadDraft;
   valueError: string | null;
   valueIsDense: boolean;
-  sculpture: SculptureId;
+  sculpture: ActiveSculptureId;
+  /** Label for the uploaded sculpture, when there is one. */
+  customSculptureName: string | null;
   theme: ThemeId;
   phase: Phase;
   onDraftFieldChange: (key: string, value: string) => void;
   onSubmit: () => void;
-  onSculptureChange: (value: SculptureId) => void;
+  onSculptureChange: (value: ActiveSculptureId) => void;
   onThemeChange: (value: ThemeId) => void;
   onShare: () => void;
   onEmbed: () => void;
   onSavePng: () => void;
 }
 
-const SCULPTURE_OPTIONS = SCULPTURES.map((sculpture) => ({
-  id: sculpture.id,
-  label: sculpture.label,
-  hint: sculpture.hint,
-}));
+const SCULPTURE_OPTIONS: ReadonlyArray<{ id: ActiveSculptureId; label: string; hint: string }> =
+  SCULPTURES.map((sculpture) => ({
+    id: sculpture.id,
+    label: sculpture.label,
+    hint: sculpture.hint,
+  }));
 
 const THEME_OPTIONS = THEME_IDS.map((id) => ({
   id,
@@ -101,6 +104,19 @@ export function ControlPanel(props: ControlPanelProps) {
 
   const extras = type.fields.length - 1;
 
+  // The uploaded sculpture joins the picker only once there is one, and it goes
+  // first: it is the one nobody else has.
+  const sculptureOptions = props.customSculptureName
+    ? [
+        {
+          id: CUSTOM_SCULPTURE as ActiveSculptureId,
+          label: 'Yours',
+          hint: `Built from ${props.customSculptureName}`,
+        },
+        ...SCULPTURE_OPTIONS,
+      ]
+    : SCULPTURE_OPTIONS;
+
   return (
     <div className="panel">
       <div className="panel-card">
@@ -168,7 +184,7 @@ export function ControlPanel(props: ControlPanelProps) {
         <ChipGroup
           legend="Sculpture"
           value={props.sculpture}
-          options={SCULPTURE_OPTIONS}
+          options={sculptureOptions}
           onChange={props.onSculptureChange}
         />
       </div>

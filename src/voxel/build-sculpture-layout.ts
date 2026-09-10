@@ -6,6 +6,15 @@ export interface SculpturePoint {
   rotation: [number, number, number];
   scale: number;
   colorIndex: number;
+  /**
+   * An exact colour, overriding the theme palette index.
+   *
+   * Only an uploaded picture sets this. Every built-in sculpture is *of* its
+   * theme — a crystal in Cyber is a cyber crystal — but someone's own logo is
+   * not, and recolouring it into the palette would be recolouring the one thing
+   * they brought with them.
+   */
+  color?: string;
 }
 
 export interface SculptureOptions {

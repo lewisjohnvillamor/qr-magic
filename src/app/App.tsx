@@ -21,6 +21,7 @@ import { SHARE_PARAM, isReadOnlySearch } from '../sharing/share-codec';
 import type { PayloadKind } from '../qr/payloads';
 import { useImage } from '../lib/use-image';
 import { readLogoFile } from '../qr/logo';
+import { readSculptureFile } from '../voxel/read-sculpture-file';
 
 const VoxelScene = lazy(() =>
   import('../components/scene/VoxelScene').then((module) => ({ default: module.VoxelScene })),
@@ -56,6 +57,7 @@ export function App() {
   const [embedMode] = useState(readEmbedMode);
   const [viewerMode] = useState(readViewerMode);
   const [configOpen, setConfigOpen] = useState(false);
+  const [sculptureBusy, setSculptureBusy] = useState(false);
   // Decoded once here and handed to whichever renderer is live, so the scene
   // and the no-WebGL fallback draw the same picture from the same element.
   const logoImage = useImage(state.logo);
@@ -166,6 +168,31 @@ export function App() {
     useExperienceStore.getState().commitPayload();
   }, []);
 
+  /**
+   * Turn a picked picture into the sculpture the code stands on.
+   *
+   * Converting is measured in tens of milliseconds, not milliseconds, so the
+   * button says what is happening rather than appearing to have missed the
+   * press. The cube budget comes from the device's own quality tier, so a
+   * picture costs a weak phone no more than a built-in sculpture does.
+   */
+  const handleSculptureFile = useCallback(
+    async (file: File) => {
+      setSculptureBusy(true);
+      try {
+        const result = await readSculptureFile(file, { count: quality.sculptureCount });
+        if (!result.ok) {
+          useExperienceStore.setState({ announcement: result.message });
+          return;
+        }
+        useExperienceStore.getState().setCustomSculpture(result.sculpture);
+      } finally {
+        setSculptureBusy(false);
+      }
+    },
+    [quality.sculptureCount],
+  );
+
   const handleLogoFile = useCallback(async (file: File) => {
     const result = await readLogoFile(file);
     if (!result.ok) {
@@ -197,6 +224,7 @@ export function App() {
     state.matrix.size,
     state.matrix.errorCorrectionLevel,
     state.sculpture,
+    state.customSculpture?.name ?? '',
     state.quality,
   ].join(':');
   const previousKey = useRef(layoutKey);
@@ -359,6 +387,7 @@ export function App() {
               moduleShape={state.moduleShape}
               cornerShape={state.cornerShape}
               logo={logoImage}
+              customPoints={state.customSculpture?.points ?? null}
             />
           </Suspense>
         ) : (
@@ -413,6 +442,7 @@ export function App() {
               moduleShape={state.moduleShape}
               cornerShape={state.cornerShape}
               logo={logoImage}
+              customPoints={state.customSculpture?.points ?? null}
             />
           </Suspense>
         ) : (
@@ -492,6 +522,7 @@ export function App() {
             moduleShape={state.moduleShape}
             cornerShape={state.cornerShape}
             logo={logoImage}
+            customPoints={state.customSculpture?.points ?? null}
           />
         </Suspense>
       ) : (
@@ -515,6 +546,7 @@ export function App() {
         valueError={state.valueError}
         valueIsDense={state.valueIsDense}
         sculpture={state.sculpture}
+        customSculptureName={state.customSculpture?.name ?? null}
         theme={state.theme}
         phase={state.phase}
         onDraftFieldChange={state.setDraftField}
@@ -541,6 +573,10 @@ export function App() {
         onCornerShapeChange={state.setCornerShape}
         onLogoFile={(file) => void handleLogoFile(file)}
         onLogoClear={() => state.setLogo(null)}
+        customSculpture={state.customSculpture}
+        sculptureBusy={sculptureBusy}
+        onSculptureFile={(file) => void handleSculptureFile(file)}
+        onSculptureClear={() => state.setCustomSculpture(null)}
       />
 
       <LiveRegion message={state.announcement} />

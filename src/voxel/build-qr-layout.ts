@@ -2,7 +2,9 @@ import type { QrMatrix } from '../qr/generate-matrix';
 import { isFinderModule, moduleAt } from '../qr/generate-matrix';
 import { buildSculptureLayout } from './build-sculpture-layout';
 import { createRng } from './rng';
-import type { SculptureId, VoxelInstance, VoxelLayout } from './types';
+import type { SculpturePoint } from './build-sculpture-layout';
+import { CUSTOM_SCULPTURE, DEFAULT_SCULPTURE } from './types';
+import type { ActiveSculptureId, VoxelInstance, VoxelLayout } from './types';
 
 /** One world unit per module: adjacent dark modules must touch exactly. */
 export const MODULE_SPACING = 1;
@@ -24,10 +26,18 @@ const SCULPTURE_LIFT = 0.45;
 
 export interface LayoutOptions {
   matrix: QrMatrix;
-  sculpture: SculptureId;
+  sculpture: ActiveSculptureId;
   /** Target decorative voxel count for the sculpture standing on the base. */
   sculptureCount: number;
   seed: number;
+  /**
+   * The sculpture built from an uploaded picture, when that is the one chosen.
+   *
+   * Passed in already built rather than built here: converting an image is
+   * expensive and happens once at upload, while this function runs again for
+   * every link, theme and quality change.
+   */
+  customPoints?: readonly SculpturePoint[] | null;
 }
 
 /**
@@ -61,7 +71,7 @@ export function modulePosition(
  *    the sculpture reads as being absorbed by the code rather than replaced.
  */
 export function buildQrLayout(options: LayoutOptions): VoxelLayout {
-  const { matrix, sculpture, sculptureCount, seed } = options;
+  const { matrix, sculpture, sculptureCount, seed, customPoints } = options;
   const rng = createRng(seed ^ 0x9e3779b9);
 
   const qrWorldSize = matrix.total * MODULE_SPACING;
@@ -147,7 +157,13 @@ export function buildQrLayout(options: LayoutOptions): VoxelLayout {
   }
 
   // ---- Sculpture standing on the plinth ----
-  const raw = buildSculptureLayout(sculpture, { count: sculptureCount, seed });
+  const raw =
+    sculpture === CUSTOM_SCULPTURE && customPoints && customPoints.length > 0
+      ? customPoints
+      : buildSculptureLayout(sculpture === CUSTOM_SCULPTURE ? DEFAULT_SCULPTURE : sculpture, {
+          count: sculptureCount,
+          seed,
+        });
 
   let radiusXZ = 1e-6;
   let minY = Infinity;
@@ -188,6 +204,7 @@ export function buildQrLayout(options: LayoutOptions): VoxelLayout {
       qrRotation: [0, 0, 0],
       qrScale: 0,
       colorIndex: point.colorIndex,
+      ...(point.color ? { color: point.color } : {}),
       // Higher cubes leave later, so the sculpture peels from the ground up.
       delay: Math.min(1, Math.max(0, y / Math.max(sculptureTop, 1))) * 0.55 + rng() * 0.15,
       isQrModule: false,
