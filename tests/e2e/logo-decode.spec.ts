@@ -20,7 +20,7 @@ test('a code with a centre logo still decodes', async ({ page }) => {
   await page.getByTestId('open-config').click();
   const drawer = page.getByTestId('config-drawer');
   await drawer.waitFor();
-  await drawer.locator('input[type="file"]').setInputFiles({
+  await drawer.getByTestId('logo-file').setInputFiles({
     name: 'logo.png',
     mimeType: 'image/png',
     buffer: LOGO_PNG,

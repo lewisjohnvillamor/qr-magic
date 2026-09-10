@@ -1,7 +1,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
-import { test } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 import { experienceUrl, openExperience, SCAN_READY_TIMEOUT } from './helpers';
-import { LOGO_PNG } from './fixtures';
+import { HEART_PNG, LOGO_PNG } from './fixtures';
 
 /**
  * Regenerates the README's images from the running app.
@@ -184,7 +184,7 @@ test.describe('shapes', () => {
     await page.getByTestId('open-config').click();
     const drawer = page.getByTestId('config-drawer');
     await drawer
-      .locator('input[type="file"]')
+      .getByTestId('logo-file')
       .setInputFiles({ name: 'logo.png', mimeType: 'image/png', buffer: LOGO_PNG });
     await drawer.locator('img.logo-preview').waitFor();
     await drawer.getByRole('button', { name: 'Done' }).click();
@@ -205,5 +205,22 @@ test.describe('shapes', () => {
     await page.getByTestId('config-drawer').waitFor();
     await page.waitForTimeout(500);
     writeFileSync(`${OUT}/config-drawer.jpg`, await page.screenshot(JPEG));
+  });
+});
+
+test.describe('custom sculpture', () => {
+  test.use({ viewport: { width: 1000, height: 640 } });
+
+  test('media custom sculpture', async ({ page }) => {
+    await openExperience(page, { url: LINK, sculpture: 'island', theme: 'nature' });
+    await page.getByTestId('open-config').click();
+    const drawer = page.getByTestId('config-drawer');
+    await drawer
+      .getByTestId('sculpture-file')
+      .setInputFiles({ name: 'heart.png', mimeType: 'image/png', buffer: HEART_PNG });
+    await expect(page.getByTestId('upload-sculpture')).toHaveText('Replace');
+    await drawer.getByRole('button', { name: 'Done' }).click();
+    await page.waitForTimeout(1200);
+    writeFileSync(`${OUT}/custom-sculpture.jpg`, await page.screenshot(JPEG));
   });
 });

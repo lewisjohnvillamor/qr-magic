@@ -149,6 +149,27 @@ export function InstancedVoxels({
   );
 
   const paletteColors = useMemo(() => palette.map((hex) => new THREE.Color(hex)), [palette]);
+
+  /**
+   * Exact colours, for the voxels that carry one.
+   *
+   * Only an uploaded picture does — everything else is a palette index, and
+   * stays a palette index. Resolved once per layout and shared by hex, because
+   * a photograph turned into cubes has a few hundred distinct colours across a
+   * few thousand voxels.
+   */
+  const exactColors = useMemo(() => {
+    const cache = new Map<string, THREE.Color>();
+    return layout.instances.map((instance) => {
+      if (!instance.color) return null;
+      let color = cache.get(instance.color);
+      if (!color) {
+        color = new THREE.Color(instance.color);
+        cache.set(instance.color, color);
+      }
+      return color;
+    });
+  }, [layout]);
   const foregroundColor = useMemo(() => new THREE.Color(qrForeground), [qrForeground]);
   const scratchColor = useMemo(() => new THREE.Color(), []);
 
@@ -228,9 +249,11 @@ export function InstancedVoxels({
       if (idleTile) {
         mesh.setColorAt(slot, idleTile);
       } else {
-        const color = instance.isQrModule
-          ? foregroundColor
-          : paletteColors[instance.colorIndex % paletteColors.length];
+        const color =
+          exactColors[i] ??
+          (instance.isQrModule
+            ? foregroundColor
+            : paletteColors[instance.colorIndex % paletteColors.length]);
         if (color) mesh.setColorAt(slot, color);
       }
     }
@@ -257,6 +280,7 @@ export function InstancedVoxels({
     layout,
     partition,
     paletteColors,
+    exactColors,
     foregroundColor,
     tileColors,
     scratch,

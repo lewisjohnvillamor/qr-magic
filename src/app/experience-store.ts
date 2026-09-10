@@ -13,8 +13,9 @@ import {
 import type { PayloadDraft, PayloadKind } from '../qr/payloads';
 import { DEFAULT_CORNER_SHAPE, DEFAULT_MODULE_SHAPE, isShapeId, isDetached } from '../qr/shapes';
 import type { ShapeId } from '../qr/shapes';
-import { DEFAULT_SCULPTURE, isSculptureId } from '../voxel/types';
-import type { SculptureId } from '../voxel/types';
+import { CUSTOM_SCULPTURE, DEFAULT_SCULPTURE, isSculptureId } from '../voxel/types';
+import type { ActiveSculptureId } from '../voxel/types';
+import type { CustomSculpture } from '../voxel/read-sculpture-file';
 import { DEFAULT_THEME, isThemeId } from '../themes/themes';
 import type { ThemeId } from '../themes/themes';
 import type { QualityLevel } from '../lib/quality';
@@ -38,7 +39,14 @@ export interface ExperienceState {
   valueError: string | null;
   valueIsDense: boolean;
 
-  sculpture: SculptureId;
+  sculpture: ActiveSculptureId;
+  /**
+   * A sculpture built from an uploaded picture, or null.
+   *
+   * Runtime only: it is never persisted and never travels in a share link, so
+   * the picture stays on the device that chose it.
+   */
+  customSculpture: CustomSculpture | null;
   theme: ThemeId;
   moduleShape: ShapeId;
   cornerShape: ShapeId;
@@ -58,7 +66,8 @@ export interface ExperienceState {
   setDraftField: (key: string, value: string) => void;
   setPayloadKind: (kind: PayloadKind) => void;
   commitPayload: () => CommitResult;
-  setSculpture: (id: SculptureId) => void;
+  setSculpture: (id: ActiveSculptureId) => void;
+  setCustomSculpture: (sculpture: CustomSculpture | null) => void;
   setTheme: (id: ThemeId) => void;
   setModuleShape: (id: ShapeId) => void;
   setCornerShape: (id: ShapeId) => void;
@@ -151,6 +160,7 @@ export const createExperienceStore = (search = '') => {
       valueIsDense: initial.value.length > 300,
 
       sculpture: initial.sculpture,
+      customSculpture: null,
       theme: initial.theme,
       moduleShape: initial.moduleShape,
       cornerShape: initial.cornerShape,
@@ -205,6 +215,27 @@ export const createExperienceStore = (search = '') => {
       },
 
       setSculpture: (id) => set({ sculpture: id }),
+
+      /**
+       * Adopt an uploaded sculpture, or drop it.
+       *
+       * Adopting selects it too: someone who has just waited for their picture
+       * to be converted wants to see it, not to then find the picker. Dropping
+       * it has to put the selection back on a built-in, or the scene would be
+       * pointing at a sculpture that no longer exists.
+       */
+      setCustomSculpture: (sculpture) =>
+        set((state) => ({
+          customSculpture: sculpture,
+          sculpture: sculpture
+            ? CUSTOM_SCULPTURE
+            : state.sculpture === CUSTOM_SCULPTURE
+              ? DEFAULT_SCULPTURE
+              : state.sculpture,
+          announcement: sculpture
+            ? `Sculpture built from ${sculpture.name}.`
+            : 'Your own sculpture was removed.',
+        })),
       setTheme: (id) => set({ theme: id }),
       setModuleShape: (id) => reconfigure({ moduleShape: id }),
       setCornerShape: (id) => set({ cornerShape: id, announcement: 'Corner shape updated.' }),
@@ -220,7 +251,10 @@ export const createExperienceStore = (search = '') => {
             url: state.value,
             kind: state.payloadKind,
             f: draftFor(state.payloadKind, state.draft),
-            sculpture: state.sculpture,
+            // A custom sculpture cannot travel: the picture it was built from
+            // never left this device, so a link naming it would open on
+            // nothing. The recipient gets the default instead.
+            sculpture: isSculptureId(state.sculpture) ? state.sculpture : DEFAULT_SCULPTURE,
             theme: state.theme,
             module: state.moduleShape,
             corner: state.cornerShape,

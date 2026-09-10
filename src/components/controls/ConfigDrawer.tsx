@@ -6,6 +6,7 @@ import type { PayloadDraft, PayloadKind } from '../../qr/payloads';
 import { CORNER_SHAPES, MODULE_SHAPES } from '../../qr/shapes';
 import type { ShapeId } from '../../qr/shapes';
 import { LOGO_ACCEPT } from '../../qr/logo';
+import type { CustomSculpture } from '../../voxel/read-sculpture-file';
 
 export interface ConfigDrawerProps {
   open: boolean;
@@ -15,6 +16,11 @@ export interface ConfigDrawerProps {
   moduleShape: ShapeId;
   cornerShape: ShapeId;
   logo: string | null;
+  customSculpture: CustomSculpture | null;
+  /** True while a picked picture is still being converted. */
+  sculptureBusy: boolean;
+  onSculptureFile: (file: File) => void;
+  onSculptureClear: () => void;
   onPayloadKindChange: (kind: PayloadKind) => void;
   onDraftFieldChange: (key: string, value: string) => void;
   onCommit: () => void;
@@ -44,6 +50,7 @@ const CORNER_OPTIONS = CORNER_SHAPES.map(({ id, label, hint }) => ({ id, label, 
 export function ConfigDrawer(props: ConfigDrawerProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const sculptureFileRef = useRef<HTMLInputElement>(null);
 
   const { open, onClose } = props;
 
@@ -136,6 +143,59 @@ export function ConfigDrawer(props: ConfigDrawerProps) {
           </section>
 
           <section className="drawer-section">
+            <h3 className="drawer-subtitle">Your own sculpture</h3>
+            <div className="logo-row">
+              {props.customSculpture ? (
+                <img
+                  className="logo-preview"
+                  src={props.customSculpture.preview}
+                  alt={`The picture your sculpture was built from: ${props.customSculpture.name}`}
+                />
+              ) : (
+                <span className="logo-empty" aria-hidden="true" />
+              )}
+              <div className="logo-actions">
+                <button
+                  type="button"
+                  className="ghost-button"
+                  disabled={props.sculptureBusy}
+                  onClick={() => sculptureFileRef.current?.click()}
+                  data-testid="upload-sculpture"
+                >
+                  {props.sculptureBusy
+                    ? 'Building…'
+                    : props.customSculpture
+                      ? 'Replace'
+                      : 'Upload a picture'}
+                </button>
+                {props.customSculpture ? (
+                  <button type="button" className="ghost-button" onClick={props.onSculptureClear}>
+                    Remove
+                  </button>
+                ) : null}
+              </div>
+              <input
+                ref={sculptureFileRef}
+                className="visually-hidden"
+                type="file"
+                accept={LOGO_ACCEPT}
+                data-testid="sculpture-file"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (file) props.onSculptureFile(file);
+                  event.target.value = '';
+                }}
+              />
+            </div>
+            <p className="drawer-note">
+              A flat picture becomes a solid object: the background is dropped, what is left is
+              extruded, and it keeps its own colours rather than the theme&rsquo;s. It stands on the
+              code and is absorbed into it like any other sculpture. Like the logo, it stays on this
+              device — a shared link falls back to a built-in one.
+            </p>
+          </section>
+
+          <section className="drawer-section">
             <h3 className="drawer-subtitle">Centre logo</h3>
             <div className="logo-row">
               {props.logo ? (
@@ -162,6 +222,7 @@ export function ConfigDrawer(props: ConfigDrawerProps) {
                 className="visually-hidden"
                 type="file"
                 accept={LOGO_ACCEPT}
+                data-testid="logo-file"
                 onChange={(event) => {
                   const file = event.target.files?.[0];
                   if (file) props.onLogoFile(file);

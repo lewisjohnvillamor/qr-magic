@@ -116,4 +116,37 @@ describe('experience store', () => {
     store.getState().toggleMuted();
     expect(store.getState().muted).toBe(false);
   });
+
+  it('selects an uploaded sculpture on arrival and puts it back on removal', () => {
+    const store = createExperienceStore('');
+    const mine = { name: 'logo.png', preview: 'data:,', points: [] };
+
+    store.getState().setCustomSculpture(mine);
+    expect(store.getState().sculpture).toBe('custom');
+    expect(store.getState().customSculpture).toBe(mine);
+
+    store.getState().setCustomSculpture(null);
+    // The scene cannot be left pointing at a sculpture that no longer exists.
+    expect(store.getState().sculpture).toBe('crystal');
+    expect(store.getState().customSculpture).toBeNull();
+  });
+
+  it('leaves a built-in selection alone when an upload is removed', () => {
+    const store = createExperienceStore('');
+    store.getState().setSculpture('island');
+    store.getState().setCustomSculpture(null);
+    expect(store.getState().sculpture).toBe('island');
+  });
+
+  it('shares a built-in in place of an uploaded sculpture', () => {
+    // The picture never left this device, so a link naming the sculpture built
+    // from it would open on nothing.
+    const store = createExperienceStore('');
+    store.getState().setCustomSculpture({ name: 'logo.png', preview: 'data:,', points: [] });
+
+    const link = store.getState().shareUrl('https://voxelqr.example/');
+    const restored = createExperienceStore(new URL(link).search);
+    expect(restored.getState().sculpture).toBe('crystal');
+    expect(restored.getState().customSculpture).toBeNull();
+  });
 });

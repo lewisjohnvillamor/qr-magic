@@ -28,6 +28,26 @@ export const SCULPTURES: readonly SculptureMeta[] = [
 
 export const DEFAULT_SCULPTURE: SculptureId = 'crystal';
 
+/**
+ * The sculpture built from a picture someone uploaded.
+ *
+ * Deliberately outside {@link SCULPTURE_IDS}: that list is the set of
+ * sculptures *anyone* can render, and it is what a share link is validated
+ * against. A custom sculpture exists only in the browser that made it — the
+ * picture never leaves the device — so a link naming it would be a link to
+ * something the recipient does not have.
+ */
+export const CUSTOM_SCULPTURE = 'custom';
+
+export type CustomSculptureId = typeof CUSTOM_SCULPTURE;
+
+/** Either a built-in sculpture or the one made from an upload. */
+export type ActiveSculptureId = SculptureId | CustomSculptureId;
+
+export function isCustomSculpture(value: unknown): value is CustomSculptureId {
+  return value === CUSTOM_SCULPTURE;
+}
+
 export function isSculptureId(value: unknown): value is SculptureId {
   return typeof value === 'string' && (SCULPTURE_IDS as readonly string[]).includes(value);
 }
@@ -41,6 +61,8 @@ export interface VoxelInstance {
   qrRotation: [number, number, number];
   qrScale: number;
   colorIndex: number;
+  /** An exact colour, overriding `colorIndex`. Only an uploaded picture sets it. */
+  color?: string;
   /** Normalized 0..1 stagger offset within the reorganization stage. */
   delay: number;
   /** True when this cube lands on a dark QR module and must be exact. */

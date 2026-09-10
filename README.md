@@ -18,7 +18,8 @@ out of the ground and the sculpture is absorbed into it. Press the code and the
 same timeline runs backwards — one surface, one gesture, both directions.
 
 A code can carry a **link, plain text, a Wi-Fi network, a contact card, an
-email, an SMS or a phone number**. Its modules and its corner rings can be
+email, an SMS or a phone number**. Upload a picture and it becomes the sculpture
+itself. Its modules and its corner rings can be
 **square, semi-round, round or dots** — and the shape applies to the voxels and
 to the finished code alike, so choosing one changes what you watch as well as
 what you scan. A **logo** can sit in the middle. All of it lives in the settings
@@ -77,6 +78,38 @@ changes what you watch as well as what you scan.
 | -------------------------------------------------------- | -------------------------------------------------------------- |
 | ![Round modules and corners](docs/media/shape-round.png) | ![Dot modules and circular corners](docs/media/shape-dots.png) |
 
+### Your own sculpture, from a picture
+
+Upload a flat image and it becomes the object standing on the code — background
+dropped, what is left extruded into a solid, keeping its own colours rather than
+the theme's. It is absorbed by the reveal exactly like a built-in sculpture.
+
+![A voxel heart, built from an uploaded picture, standing on its code](docs/media/custom-sculpture.jpg)
+
+The interesting part is not putting a cube where each pixel is — that gives a
+flat card with a brick where the background used to be. It is deciding which
+pixels are the subject, and how to split a fixed cube budget between resolution
+and depth:
+
+- **The background is found by counting the border, not averaging it.** A logo
+  cropped to its own bounding box runs off the frame, and an average is dragged
+  into no-man's-land by those pixels, matches nothing, and hands back the whole
+  picture as a slab. Counting means the subject has to _outnumber_ the
+  background around the edge before detection gives up — and a photograph that
+  runs edge to edge correctly keeps every pixel, because there is no background
+  to remove.
+- **Some of the budget buys depth.** Spending it all on resolution gives a
+  picture one cube thick: seen from the side it is a line, and the reveal turns
+  the sculpture before it comes apart. A coarser grid that is genuinely solid
+  reads as an object.
+- **The cube budget is the device's own.** A picture costs a weak phone no more
+  than a built-in sculpture does.
+
+Like the logo, the picture stays on the device that chose it — a shared link
+falls back to a built-in sculpture rather than opening on nothing.
+
+### Centre logo
+
 A logo can sit in the middle. Adding one switches to the strongest error
 correction, and the covered area is capped at roughly 5% of the code:
 
@@ -132,6 +165,7 @@ React UI  ──►  experience store (validated state)
                           │
               src/voxel/  build-qr-layout + build-sculpture-layout → VoxelInstance[]
                           module-geometry: the same shape, as geometry
+                          image-to-voxels: an uploaded picture, as a solid
                           │
           src/animation/  one reversible master timeline → progress 0..1
                           │
@@ -319,8 +353,9 @@ decoded share link is re-encoded from its own fields rather than trusted, so a
 hand-edited payload cannot smuggle in a string these encoders would never have
 produced.
 
-**A logo never leaves the device.** The picked file is decoded, scaled down and
-re-encoded as a PNG in the browser — which also means the canvas the code is
+**An uploaded picture never leaves the device** — neither the centre logo nor
+the one a sculpture is built from. The picked file is decoded, scaled down and
+re-encoded in the browser — which also means the canvas the code is
 drawn on is never tainted by a foreign image, so the "save as image" export
 cannot fail at the moment someone reaches for it. SVG is refused for the same
 reason: it can reference external resources. The logo is not in the share link.
