@@ -459,7 +459,10 @@ export function App() {
   }
 
   return (
-    <div className="app">
+    // The drawer is an overlay, so the panel behind it has to be told to keep
+    // out of its way — otherwise the footer's last chips sit underneath it,
+    // which reads as options that have been cut off rather than covered.
+    <div className="app" data-drawer={configOpen ? 'open' : 'closed'}>
       {/* The interface gets out of the way once the code is scannable: anything
           overlapping the code is one more thing for a camera to trip over. */}
       <Masthead

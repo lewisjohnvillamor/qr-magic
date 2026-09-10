@@ -103,6 +103,7 @@ export function ConfigDrawer(props: ConfigDrawerProps) {
               value={props.payloadKind}
               options={KIND_OPTIONS}
               onChange={props.onPayloadKindChange}
+              wrap
             />
             <PayloadFields
               kind={props.payloadKind}
@@ -119,12 +120,14 @@ export function ConfigDrawer(props: ConfigDrawerProps) {
               value={props.moduleShape}
               options={SHAPE_OPTIONS}
               onChange={props.onModuleShapeChange}
+              columns={2}
             />
             <ChipGroup
               legend="Corners"
               value={props.cornerShape}
               options={CORNER_OPTIONS}
               onChange={props.onCornerShapeChange}
+              columns={2}
             />
             <p className="drawer-note">
               Shapes apply to the voxels and to the finished code alike. Dots use stronger error

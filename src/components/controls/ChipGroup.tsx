@@ -1,4 +1,5 @@
 import { useId } from 'react';
+import type { CSSProperties } from 'react';
 
 export interface ChipOption<T extends string> {
   id: T;
@@ -12,6 +13,18 @@ export interface ChipGroupProps<T extends string> {
   options: readonly ChipOption<T>[];
   onChange: (value: T) => void;
   disabled?: boolean;
+  /**
+   * Wrap onto as many lines as the options need, rather than scrolling
+   * sideways. For a group in a narrow column, where a row that runs off the
+   * edge has nowhere useful to go.
+   */
+  wrap?: boolean;
+  /**
+   * Lay the chips out in this many equal columns instead of letting them wrap
+   * where they fall. For a small set of peers — four shapes — where an
+   * uneven break reads as a mistake rather than as a layout.
+   */
+  columns?: number;
 }
 
 /**
@@ -19,7 +32,8 @@ export interface ChipGroupProps<T extends string> {
  *
  * Selection is communicated by `aria-checked` and by a check glyph, never by
  * colour alone, and the whole group is reachable with arrow keys through native
- * radio semantics.
+ * radio semantics — which is also the escape hatch that keeps a row of chips
+ * usable however it is laid out.
  */
 export function ChipGroup<T extends string>({
   legend,
@@ -27,13 +41,22 @@ export function ChipGroup<T extends string>({
   options,
   onChange,
   disabled = false,
+  wrap = false,
+  columns,
 }: ChipGroupProps<T>) {
   const groupId = useId();
 
   return (
     <fieldset className="option-group" disabled={disabled}>
       <legend className="option-legend">{legend}</legend>
-      <div className="chips" role="radiogroup" aria-label={legend}>
+      <div
+        className="chips"
+        data-wrap={wrap || columns ? 'true' : 'false'}
+        role="radiogroup"
+        aria-label={legend}
+        {...(columns ? { style: { '--chip-columns': columns } as CSSProperties } : {})}
+        data-columns={columns ? 'true' : 'false'}
+      >
         {options.map((option) => (
           <button
             key={option.id}

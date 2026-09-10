@@ -58,6 +58,34 @@ test.describe('code settings drawer', () => {
     );
   });
 
+  test('shows every option without a sideways scroll', async ({ page }) => {
+    // The rows used to be horizontal scrollers with the scrollbar hidden, which
+    // is an affordance only a finger has: a mouse cannot pan a row and a wheel
+    // scrolls the page instead, so on a pointer device every option past the
+    // faded edge was simply unreachable — and the fade read as broken padding
+    // rather than as "there is more this way". They wrap now.
+    await page.getByTestId('open-config').click();
+    await page.getByTestId('config-drawer').waitFor();
+
+    const rows = await page.evaluate(() =>
+      Array.from(document.querySelectorAll('.drawer .chips')).map((row) => {
+        const box = row.getBoundingClientRect();
+        const chips = Array.from(row.children).map((chip) => chip.getBoundingClientRect());
+        return {
+          label: row.getAttribute('aria-label'),
+          clipped: row.scrollWidth - row.clientWidth,
+          widest: Math.max(...chips.map((chip) => chip.right)) - box.right,
+        };
+      }),
+    );
+
+    expect(rows.length).toBeGreaterThan(0);
+    for (const row of rows) {
+      expect(row.clipped, `${row.label} has options scrolled out of reach`).toBeLessThanOrEqual(0);
+      expect(row.widest, `${row.label} overflows its own gutter`).toBeLessThanOrEqual(1);
+    }
+  });
+
   test('keeps the caret in the field while you type', async ({ page }) => {
     // The drawer re-renders on every keystroke it collects. An effect that
     // moved focus into the panel on each of those renders would pull the caret
